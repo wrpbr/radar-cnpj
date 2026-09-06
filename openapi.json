@@ -1,0 +1,1931 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Radar CNPJ",
+    "version": "2d690e87",
+    "description": "radar-cnpj.com — índice GET /api/."
+  },
+  "servers": [
+    {
+      "url": "https://radar-cnpj.com"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "SaudeOrigem": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` quando a origem responde."
+          },
+          "service": {
+            "type": "string",
+            "description": "Qual serviço respondeu."
+          },
+          "db": {
+            "type": "string",
+            "description": "Estado do banco: `up` ou o motivo de não estar."
+          },
+          "import": {
+            "type": "object",
+            "description": "`dump_date`, `loaded_at` e as contagens por tabela — é a idade real do dado."
+          }
+        },
+        "required": [
+          "ok",
+          "service",
+          "db",
+          "import"
+        ],
+        "description": "Saúde da origem e a idade do dado. É aqui que se vê de quando é o dump da Receita."
+      },
+      "Avaliacao": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` quando a avaliação saiu."
+          },
+          "texto": {
+            "type": "string",
+            "description": "A ideia como você a escreveu."
+          },
+          "cnae": {
+            "type": "string",
+            "description": "CNAE a que a ideia foi mapeada.",
+            "nullable": true
+          },
+          "fonte_cnae": {
+            "type": "string",
+            "description": "Como o CNAE foi determinado: pela IA ou pelo hint que você mandou."
+          },
+          "filtros": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Os filtros normalizados que a avaliação aplicou — dá para reusar em `GET /api/busca`."
+          },
+          "ficha": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FichaOferta"
+              }
+            ],
+            "description": "O retrato da oferta formal e a leitura honesta dela."
+          }
+        },
+        "required": [
+          "ok",
+          "texto",
+          "cnae",
+          "fonte_cnae",
+          "filtros",
+          "ficha"
+        ],
+        "description": "A leitura de uma ideia de negócio contra a oferta formal da Receita. É o primeiro produto da home."
+      },
+      "FichaOferta": {
+        "type": "object",
+        "properties": {
+          "mapeou_cnae": {
+            "type": "boolean",
+            "description": "Se deu para mapear a ideia num CNAE. Sem isso, os números abaixo não valem."
+          },
+          "oferta": {
+            "type": "object",
+            "description": "Empresas ativas, abertas e baixadas no recorte, direto da Receita."
+          },
+          "formalizacao": {
+            "type": "object",
+            "description": "Como essas empresas se formalizam: MEI, Simples, porte."
+          },
+          "leitura": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "O que os números sugerem, em frases — sem promessa de demanda."
+          },
+          "limites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "O que estes dados NÃO dizem. Não há volume de busca aqui, e renda passiva isto não é."
+          },
+          "passivo": {
+            "type": "object",
+            "description": "Sinais de risco no recorte, quando existem.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "mapeou_cnae",
+          "oferta",
+          "formalizacao",
+          "leitura",
+          "limites",
+          "passivo"
+        ],
+        "description": "Quantas empresas já fazem isso, como elas se formalizam e o que esses números não dizem."
+      },
+      "FichaCnpj": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` quando o CNPJ existe na base."
+          },
+          "data": {
+            "type": "object",
+            "description": "O cadastro completo: identificação, endereço, sócios, CNAEs, Simples e situação."
+          }
+        },
+        "required": [
+          "ok",
+          "data"
+        ],
+        "description": "A ficha cadastral de uma empresa, repassada da origem. `data` é o cadastro da Receita como ela o entrega — o formato é contrato da origem, não deste Worker."
+      },
+      "PaginaDeBusca": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` quando a busca rodou."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Página devolvida, começando em 0."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Quantos resultados por página."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Se existe página seguinte."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Empresa"
+            },
+            "description": "As empresas desta página."
+          }
+        },
+        "required": [
+          "ok",
+          "page",
+          "pageSize",
+          "hasMore",
+          "results"
+        ],
+        "description": "Página da busca. Paginação por `page`/`pageSize`, e `hasMore` no lugar de um total — contar 71 milhões de estabelecimentos a cada busca não muda decisão nenhuma."
+      },
+      "Empresa": {
+        "type": "object",
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "description": "CNPJ só com dígitos, 14 posições."
+          },
+          "cnpjFormatted": {
+            "type": "string",
+            "description": "O mesmo CNPJ com pontuação, para mostrar a uma pessoa."
+          },
+          "razaoSocial": {
+            "type": "string",
+            "description": "Razão social registrada na Receita."
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "description": "Nome fantasia, quando declarado.",
+            "nullable": true
+          },
+          "situacao": {
+            "type": "string",
+            "description": "Situação cadastral: ativa, baixada, suspensa, inapta, nula."
+          },
+          "uf": {
+            "type": "string",
+            "description": "Unidade da federação do estabelecimento.",
+            "nullable": true
+          },
+          "municipio": {
+            "type": "string",
+            "description": "Município do estabelecimento.",
+            "nullable": true
+          },
+          "bairro": {
+            "type": "string",
+            "description": "Bairro do estabelecimento.",
+            "nullable": true
+          },
+          "cnae": {
+            "type": "string",
+            "description": "CNAE principal do estabelecimento.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "cnpj",
+          "cnpjFormatted",
+          "razaoSocial",
+          "nomeFantasia",
+          "situacao",
+          "uf",
+          "municipio",
+          "bairro",
+          "cnae"
+        ],
+        "description": "Uma empresa no resultado de busca. É o recorte da origem, não o cadastro inteiro."
+      },
+      "Export": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` quando o export saiu."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Quantas empresas o arquivo traz."
+          },
+          "capped": {
+            "type": "boolean",
+            "description": "`true` quando o export bateu no teto da origem e não trouxe tudo — o número acima não é o total do filtro."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Empresa"
+            },
+            "description": "As empresas exportadas."
+          }
+        },
+        "required": [
+          "ok",
+          "count",
+          "capped",
+          "results"
+        ],
+        "description": "O envelope de `GET /api/export?format=json`. Com `format=csv` a rota devolve o arquivo, não este objeto."
+      },
+      "ListaSugestao": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "As sugestões, cada uma com o texto e o que ela identifica."
+          }
+        },
+        "required": [
+          "ok",
+          "results"
+        ],
+        "description": "Sugestões de autocomplete — o suficiente para montar a lista enquanto a pessoa digita."
+      },
+      "ListaReferencia": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemReferencia"
+            },
+            "description": "Os itens que casam com a consulta."
+          }
+        },
+        "required": [
+          "ok",
+          "results"
+        ],
+        "description": "Itens de um vocabulário oficial (CNAE, município, natureza jurídica) para montar seletor."
+      },
+      "ItemReferencia": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "integer",
+            "description": "Código oficial, ex. `4721102` para padaria."
+          },
+          "descricao": {
+            "type": "string",
+            "description": "Nome do código por extenso."
+          }
+        },
+        "required": [
+          "codigo",
+          "descricao"
+        ],
+        "description": "Um item de vocabulário oficial: o código que a Receita usa e o nome dele."
+      },
+      "Local": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "cidade": {
+            "type": "string",
+            "description": "Cidade detectada.",
+            "nullable": true
+          },
+          "uf": {
+            "type": "string",
+            "description": "Unidade da federação detectada.",
+            "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "description": "CEP aproximado da borda.",
+            "nullable": true
+          },
+          "pais": {
+            "type": "string",
+            "description": "País detectado, ISO 3166-1 alpha-2.",
+            "nullable": true
+          },
+          "fonte": {
+            "type": "string",
+            "description": "De onde veio a detecção."
+          }
+        },
+        "required": [
+          "ok",
+          "cidade",
+          "uf",
+          "cep",
+          "pais",
+          "fonte"
+        ],
+        "description": "Onde o visitante está, segundo a borda da Cloudflare. Nunca é cacheado: cache aqui daria o lugar de outra pessoa."
+      },
+      "MunicipioProximo": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "municipio": {
+            "type": "object",
+            "description": "`codigo`, `descricao`, `uf` e `km` — a distância até o centro do município."
+          },
+          "bairro": {
+            "type": "object",
+            "description": "Bairro do CNEFE mais próximo, quando existe."
+          },
+          "cep": {
+            "type": "string",
+            "description": "CEP mais próximo, quando existe."
+          }
+        },
+        "required": [
+          "ok",
+          "municipio"
+        ],
+        "description": "O município do IBGE mais próximo de um par de coordenadas, e o bairro do CNEFE quando dá para dizer."
+      },
+      "Sessao": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "UUID a mandar no header `x-radar-session` nas rotas de monitor."
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "description": "A sessão anônima de monitoramento. Não tem login: o uuid É a identidade, e quem o tem vê os watches."
+      },
+      "Ok": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true` — a falha vem como status 4xx/5xx, não como `ok:false`."
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "description": "Confirmação de escrita que não tem corpo próprio a devolver."
+      },
+      "Watches": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "watches": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Um item por CNPJ acompanhado."
+          },
+          "plan": {
+            "type": "string",
+            "description": "Plano em vigor para a sessão, decidido pela origem."
+          },
+          "quota": {
+            "type": "integer",
+            "description": "Quantos watches a sessão pode ter."
+          },
+          "used": {
+            "type": "integer",
+            "description": "Quantos já estão em uso."
+          },
+          "suspensas": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Watches suspensos e por quê."
+          }
+        },
+        "required": [
+          "ok",
+          "watches",
+          "plan",
+          "quota",
+          "used",
+          "suspensas"
+        ],
+        "description": "Os CNPJs que esta sessão acompanha, com a cota que a ORIGEM aplica — não este Worker."
+      },
+      "Alertas": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Um item por alteração detectada num CNPJ acompanhado."
+          },
+          "retidos": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Alertas que existem mas não foram entregues — normalmente por falta de e-mail confirmado."
+          }
+        },
+        "required": [
+          "ok",
+          "alerts",
+          "retidos"
+        ],
+        "description": "Os alertas gerados para os watches desta sessão."
+      },
+      "HistoricoCnpj": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Sempre `true`."
+          },
+          "cnpj": {
+            "type": "string",
+            "description": "CNPJ consultado, só dígitos."
+          },
+          "cnpjFormatted": {
+            "type": "string",
+            "description": "O mesmo CNPJ com pontuação."
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Uma entrada por alteração observada, com o campo, o valor anterior e a data."
+          }
+        },
+        "required": [
+          "ok",
+          "cnpj",
+          "cnpjFormatted",
+          "changes"
+        ],
+        "description": "O que mudou no cadastro de um CNPJ ao longo do tempo — é o que o monitoramento observa."
+      },
+      "Metricas": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "description": "Nome do produto."
+          },
+          "today_visits": {
+            "type": "integer",
+            "description": "Visitantes distintos hoje — não conta autocomplete."
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Um registro por dia da janela."
+          },
+          "usage": {
+            "type": "object",
+            "description": "Uso por recurso — aqui, `queries`."
+          },
+          "accounts": {
+            "type": "object",
+            "description": "Sessões de monitoramento existentes."
+          }
+        },
+        "required": [
+          "app",
+          "today_visits",
+          "days",
+          "usage",
+          "accounts"
+        ],
+        "description": "Métricas operacionais da origem, 7 dias. Sem token vêm só `app`, `today_visits` e `usage`; `days` e `accounts` exigem `METRICS_TOKEN`."
+      }
+    }
+  },
+  "paths": {
+    "/okf/{arquivo}": {
+      "get": {
+        "operationId": "get_okf_by_arquivo",
+        "summary": "Bundle OKF (Open Knowledge Format v0.1): markdown com frontmatter para o agente ler o produto inteiro sem parsear HTML.",
+        "description": "Devolve: `text/markdown`. Comece por `/okf/index.md`, que lista o bundle.",
+        "parameters": [
+          {
+            "name": "arquivo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`text/markdown`. Comece por `/okf/index.md`, que lista o bundle."
+          },
+          "404": {
+            "description": "Arquivo fora do bundle."
+          }
+        }
+      }
+    },
+    "/.well-known/{arquivo}": {
+      "get": {
+        "operationId": "get_well_known_by_arquivo",
+        "summary": "Descoberta de máquina antes da home: `api-catalog` (RFC 9727, linkset com a API e o MCP), `security.txt` (RFC 9116) e `mcp-registry-auth` (chave do registro oficial de MCP).",
+        "description": "Devolve: `application/linkset+json` no api-catalog; `text/plain` nos outros dois.",
+        "parameters": [
+          {
+            "name": "arquivo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`application/linkset+json` no api-catalog; `text/plain` nos outros dois."
+          },
+          "404": {
+            "description": "Nome fora dos quatro publicados."
+          }
+        }
+      }
+    },
+    "/apis.json": {
+      "get": {
+        "operationId": "get_apis_json",
+        "summary": "APIs.json (apisjson.org, 0.19): o índice que o APIs.io colhe — a API, o MCP, OpenAPI, guia e bundle OKF num arquivo só. Também em `/.well-known/apis.json`.",
+        "description": "Devolve: `application/json` no formato APIs.json 0.19: `apis[]` com `baseURL`, `humanURL` e `properties[]`.",
+        "responses": {
+          "200": {
+            "description": "`application/json` no formato APIs.json 0.19: `apis[]` com `baseURL`, `humanURL` e `properties[]`."
+          }
+        }
+      }
+    },
+    "/api/": {
+      "get": {
+        "operationId": "api_index",
+        "summary": "Índice auto-descrito de toda a superfície deste Worker, com a origem declarada.",
+        "description": "Devolve: { name, description, build, base_url, origin_api, docs, conventions, auth, endpoints, quota, mcp, mcp_tools, quickstart }",
+        "responses": {
+          "200": {
+            "description": "{ name, description, build, base_url, origin_api, docs, conventions, auth, endpoints, quota, mcp, mcp_tools, quickstart }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Nome do produto."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "O que o produto faz, em uma frase."
+                    },
+                    "build": {
+                      "type": "string",
+                      "description": "Commit publicado."
+                    },
+                    "base_url": {
+                      "type": "string",
+                      "description": "Origem em que esta API está servindo."
+                    },
+                    "origin_api": {
+                      "type": "string",
+                      "description": "A API de dados por trás deste proxy — é lá que o dado mora."
+                    },
+                    "docs": {
+                      "type": "object",
+                      "description": "Links para llms.txt, llms-full.txt, openapi.json, MCP e a UI."
+                    },
+                    "conventions": {
+                      "type": "object",
+                      "description": "Formato de erro, CORS, x402 e a regra de paridade UI↔API."
+                    },
+                    "auth": {
+                      "type": "object",
+                      "description": "Cada modo de autenticação e como obtê-lo."
+                    },
+                    "endpoints": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Todo endpoint com método, caminho, auth, URL absoluta e o que devolve."
+                    },
+                    "quota": {
+                      "type": "object",
+                      "description": "O que é grátis, o que custa e como pagar."
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "description": "Endereço e transporte do servidor MCP."
+                    },
+                    "mcp_tools": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Nome de cada tool do MCP."
+                    },
+                    "quickstart": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "As chamadas que levam da ideia à lista de empresas."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description",
+                    "build",
+                    "base_url",
+                    "origin_api",
+                    "docs",
+                    "conventions",
+                    "auth",
+                    "endpoints",
+                    "quota",
+                    "mcp",
+                    "mcp_tools",
+                    "quickstart"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Saúde da origem e a idade do dado: de quando é o dump da Receita e o que ele tem.",
+        "description": "`import.dump_date` é a data do dump da Receita e `import.counts` traz a contagem por tabela — é onde se descobre que o dado tem semanas, não minutos.\nDevolve: { ok, service, db, import }",
+        "responses": {
+          "200": {
+            "description": "{ ok, service, db, import }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaudeOrigem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "post_mcp",
+        "summary": "Servidor MCP por HTTP (Streamable HTTP, JSON-RPC 2.0) — pluga no cliente sem instalar nada.",
+        "description": "As tools são as operações deste mesmo catálogo; o MCP não tem backend próprio. `GET /mcp` devolve o cartão do servidor.\nDevolve: Resposta JSON-RPC 2.0 (`initialize`, `tools/list` ou `tools/call`).\nCredencial vai nos headers de sempre (X-Guest-Token, Authorization, X-PAYMENT) e é repassada à API.\nCota estourada chega como 402 com accepts[] dentro do resultado da tool — pague e repita.",
+        "responses": {
+          "200": {
+            "description": "Resposta JSON-RPC 2.0 (`initialize`, `tools/list` ou `tools/call`)."
+          }
+        }
+      }
+    },
+    "/api/avaliar": {
+      "post": {
+        "operationId": "avaliar",
+        "summary": "Cola uma ideia de negócio em texto e recebe a ficha da oferta formal na Receita.",
+        "description": "É o primeiro produto da home. Devolve o CNAE a que a ideia foi mapeada, quantas empresas ativas, abertas e baixadas existem no recorte, como elas se formalizam e uma leitura honesta disso. **Não inventa volume de busca** e não promete demanda: `ficha.limites` diz o que os números não dizem. Renda passiva isto não é.\nDevolve: { ok, texto, cnae, fonte_cnae, filtros, ficha{mapeou_cnae,oferta,formalizacao,leitura,limites,passivo} }",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "texto": {
+                    "type": "string",
+                    "description": "A ideia em 3 a 400 caracteres."
+                  },
+                  "uf": {
+                    "type": "string",
+                    "description": "Hint de estado; só entra se a IA não resolver o lugar sozinha."
+                  },
+                  "municipio": {
+                    "type": "integer",
+                    "description": "Hint de município (código IBGE); mesma regra do `uf`."
+                  }
+                },
+                "required": [
+                  "texto"
+                ]
+              },
+              "example": {
+                "texto": "padaria em Campinas",
+                "uf": "SP",
+                "municipio": 6291
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok, texto, cnae, fonte_cnae, filtros, ficha{mapeou_cnae,oferta,formalizacao,leitura,limites,passivo} }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Avaliacao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto fora de 3–400 caracteres, ou corpo que não é JSON."
+          },
+          "405": {
+            "description": "Só POST nesta rota."
+          }
+        }
+      }
+    },
+    "/api/cnpj/{cnpj}": {
+      "get": {
+        "operationId": "get_cnpj",
+        "summary": "A ficha cadastral completa de uma empresa, pelos 14 dígitos do CNPJ.",
+        "description": "Cacheada na borda por 6 horas — o dump da Receita não muda em minutos.\nDevolve: { ok, data }",
+        "parameters": [
+          {
+            "name": "cnpj",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, data }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaCnpj"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CNPJ que não tem 14 dígitos."
+          },
+          "404": {
+            "description": "CNPJ não existe na base."
+          }
+        }
+      }
+    },
+    "/api/busca": {
+      "get": {
+        "operationId": "search",
+        "summary": "Busca empresas por termo e/ou filtros avançados, paginada.",
+        "description": "Exige termo OU pelo menos um filtro — varrer 71 milhões de estabelecimentos sem recorte não é uma busca, é um dump.\nDevolve: { ok, page, pageSize, hasMore, results[{cnpj,cnpjFormatted,razaoSocial,nomeFantasia,situacao,uf,municipio,bairro,cnae}] }",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Termo de busca, entre 2 e 120 caracteres.",
+            "example": "padaria"
+          },
+          {
+            "name": "f",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtros avançados em JSON (CNAE, situação, porte, data de abertura).",
+            "example": "{\"uf\":\"SP\"}"
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Que campo o termo procura, quando não é busca livre."
+          },
+          {
+            "name": "uf",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restringe a uma unidade da federação.",
+            "example": "SP"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Página, começando em 0."
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Resultados por página, de 1 a 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, page, pageSize, hasMore, results[{cnpj,cnpjFormatted,razaoSocial,nomeFantasia,situacao,uf,municipio,bairro,cnae}] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeBusca"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`busca_vazia` (sem termo nem filtro), `termo_invalido` (fora de 2–120) ou `filtros_invalidos`."
+          }
+        }
+      }
+    },
+    "/api/export": {
+      "get": {
+        "operationId": "get_api_export",
+        "summary": "Exporta o resultado da busca em CSV ou JSON, com os mesmos filtros dela.",
+        "description": "Duas formas na mesma rota. Com `format=json` a resposta é o envelope descrito abaixo — é o que um agente usa. Com `format=csv` (o padrão) vem o arquivo: content-type e content-disposition são repassados da origem, para o browser baixar direto do link. `capped` avisa quando o export bateu no teto e não trouxe tudo.\nDevolve: { ok, count, capped, results[{cnpj,cnpjFormatted,razaoSocial,nomeFantasia,situacao,uf,municipio,bairro,cnae}] }",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Termo de busca, entre 2 e 120 caracteres.",
+            "example": "padaria"
+          },
+          {
+            "name": "f",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtros avançados em JSON (CNAE, situação, porte, data de abertura).",
+            "example": "{\"uf\":\"SP\"}"
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Que campo o termo procura, quando não é busca livre."
+          },
+          {
+            "name": "uf",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restringe a uma unidade da federação.",
+            "example": "SP"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "csv",
+              "enum": [
+                "csv",
+                "json"
+              ]
+            },
+            "description": "Formato do arquivo."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, count, capped, results[{cnpj,cnpjFormatted,razaoSocial,nomeFantasia,situacao,uf,municipio,bairro,cnae}] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Export"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`formato_invalido`, ou os mesmos erros de `GET /api/busca`."
+          }
+        }
+      }
+    },
+    "/api/sugerir": {
+      "get": {
+        "operationId": "suggest",
+        "summary": "Autocomplete de empresas e termos, para montar a lista enquanto a pessoa digita.",
+        "description": "Não conta como visita nas métricas — senão o painel mediria tecla, não gente.\nDevolve: { ok, results }",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O que já foi digitado.",
+            "example": "padar"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Quantas sugestões devolver, de 1 a 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, results }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaSugestao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`q` ausente ou curto demais."
+          }
+        }
+      }
+    },
+    "/api/ref": {
+      "get": {
+        "operationId": "ref",
+        "summary": "Vocabulários oficiais para montar seletor: CNAE, município e natureza jurídica.",
+        "description": "Ou você busca por texto (`q`) ou resolve códigos que já tem (`codigos`) — `codigos` ganha quando os dois vêm.\nDevolve: { ok, results[{codigo,descricao}] }",
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cnae",
+                "municipio",
+                "natureza"
+              ]
+            },
+            "description": "Qual vocabulário consultar."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Texto a procurar no vocabulário, até 60 caracteres.",
+            "example": "padaria"
+          },
+          {
+            "name": "codigos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Códigos separados por vírgula, para resolver os nomes deles.",
+            "example": "4721102,4712100"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, results[{codigo,descricao}] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaReferencia"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`tipo` ausente ou fora da lista."
+          }
+        }
+      }
+    },
+    "/api/ia": {
+      "post": {
+        "operationId": "ia_filters",
+        "summary": "Transforma um texto livre nos filtros normalizados que a busca aceita.",
+        "description": "Caminho síncrono: leva de 18 a 20 segundos. Quando estoura o tempo, use `POST /api/ia/jobs`.\nDevolve: { ok, filtros }",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "texto": {
+                    "type": "string",
+                    "description": "A descrição em linguagem natural do que você procura."
+                  }
+                },
+                "required": [
+                  "texto"
+                ]
+              },
+              "example": {
+                "texto": "padarias em SP com MEI"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok, filtros }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "description": "Sempre `true` quando a IA respondeu."
+                    },
+                    "filtros": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Os filtros normalizados, prontos para virar o `f` de `GET /api/busca`."
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "filtros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto ausente ou fora do tamanho aceito."
+          },
+          "504": {
+            "description": "O caminho síncrono estourou — enfileire em `POST /api/ia/jobs`."
+          }
+        }
+      }
+    },
+    "/api/ia/jobs": {
+      "post": {
+        "operationId": "post_api_ia_jobs",
+        "summary": "Enfileira a mesma tradução de texto para filtros, quando a síncrona não cabe no tempo.",
+        "description": "Devolve: { job_id, eta }",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "texto": {
+                    "type": "string",
+                    "description": "A descrição em linguagem natural do que você procura."
+                  }
+                },
+                "required": [
+                  "texto"
+                ]
+              },
+              "example": {
+                "texto": "padarias em SP com MEI"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ job_id, eta }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "description": "ID do trabalho, para consultar em `GET /api/ia/jobs/:id`."
+                    },
+                    "eta": {
+                      "type": "integer",
+                      "description": "Estimativa de segundos até ficar pronto."
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "eta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto ausente ou fora do tamanho aceito."
+          }
+        }
+      }
+    },
+    "/api/ia/jobs/{id}": {
+      "get": {
+        "operationId": "get_api_ia_jobs_by_id",
+        "summary": "Consulta o trabalho de IA enfileirado; quando pronto, devolve os filtros.",
+        "description": "Devolve: { status, filtros? }",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ status, filtros? }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Estado do trabalho."
+                    },
+                    "filtros": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Os filtros normalizados; só quando `status` é `done`."
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Trabalho não existe ou já expirou."
+          }
+        }
+      }
+    },
+    "/api/local": {
+      "get": {
+        "operationId": "local",
+        "summary": "Cidade e UF de quem está chamando, pela borda da Cloudflare.",
+        "description": "Nunca é cacheada: cache aqui entregaria o lugar de outra pessoa.\nDevolve: { ok, cidade, uf, cep, pais, fonte }",
+        "responses": {
+          "200": {
+            "description": "{ ok, cidade, uf, cep, pais, fonte }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Local"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/municipio-proximo": {
+      "get": {
+        "operationId": "get_api_municipio_proximo",
+        "summary": "O município do IBGE mais próximo de um par de coordenadas, com o bairro do CNEFE.",
+        "description": "Também nunca é cacheada. Coordenada ausente ou vazia NÃO vira zero — (0,0) é um lugar de verdade, no golfo da Guiné.\nDevolve: { ok, municipio, bairro?, cep? }",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Latitude, entre -90 e 90.",
+            "example": "-23.55"
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Longitude, entre -180 e 180.",
+            "example": "-46.63"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, municipio, bairro?, cep? }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MunicipioProximo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`lat` ou `lon` ausentes ou fora da faixa."
+          }
+        }
+      }
+    },
+    "/api/monitor/session": {
+      "post": {
+        "operationId": "monitor_session",
+        "summary": "Cria uma sessão anônima de monitoramento e devolve o uuid dela.",
+        "description": "Não pede e-mail nem senha. O uuid vai no header `x-radar-session` de todas as outras rotas de monitor.\nDevolve: { session_id }",
+        "responses": {
+          "200": {
+            "description": "{ session_id }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sessao"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitor/session/email": {
+      "put": {
+        "operationId": "put_api_monitor_session_email",
+        "summary": "Cadastra o e-mail que vai receber os alertas desta sessão.",
+        "description": "Sem e-mail confirmado os alertas continuam sendo gerados, mas ficam retidos — aparecem em `retidos` de `GET /api/me/monitor/alerts`.\nDevolve: { ok }",
+        "parameters": [
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão, vindo de `POST /api/monitor/session`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Endereço que vai receber os alertas."
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              },
+              "example": {
+                "email": "a@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E-mail ausente ou malformado."
+          },
+          "401": {
+            "description": "Header `x-radar-session` ausente ou desconhecido."
+          }
+        }
+      }
+    },
+    "/api/me/monitor/watches": {
+      "get": {
+        "operationId": "list_watches",
+        "summary": "Os CNPJs que esta sessão acompanha, com a cota aplicada pela origem.",
+        "description": "Quem decide a cota é a origem (`api.radar-cnpj.com`), que tem banco e transação — este Worker só reage ao 402 dela. Por isso `quota` e `plan` vêm na resposta, e não de uma variável local.\nDevolve: { ok, watches, plan, quota, used, suspensas }",
+        "parameters": [
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão de monitoramento."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, watches, plan, quota, used, suspensas }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Watches"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Header `x-radar-session` ausente ou desconhecido."
+          }
+        }
+      }
+    },
+    "/api/me/monitor/watch": {
+      "post": {
+        "operationId": "add_watch",
+        "summary": "Passa a acompanhar um CNPJ. Os primeiros 10 da sessão são grátis; a partir daí, x402 por 30 dias.",
+        "description": "Quem cobra é a origem: ela responde **402 com `accepts[]`** e este Worker repassa. Pague e repita a mesma chamada com `X-PAYMENT`.\nDevolve: { ok }",
+        "parameters": [
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão de monitoramento."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cnpj": {
+                    "type": "string",
+                    "description": "CNPJ a acompanhar, 14 dígitos sem pontuação."
+                  }
+                },
+                "required": [
+                  "cnpj"
+                ]
+              },
+              "example": {
+                "cnpj": "00000000000000"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CNPJ que não tem 14 dígitos."
+          },
+          "401": {
+            "description": "Sessão ausente ou desconhecida."
+          },
+          "402": {
+            "description": "Cota estourada. A resposta traz `accepts[]` (x402, USDC na Base): pague e repita a mesma chamada com `X-PAYMENT`."
+          }
+        }
+      }
+    },
+    "/api/me/monitor/watch/{cnpj}": {
+      "delete": {
+        "operationId": "delete_api_me_monitor_watch_by_cnpj",
+        "summary": "Para de acompanhar um CNPJ. A chave é o próprio CNPJ, não um id.",
+        "description": "Devolve: { ok }",
+        "parameters": [
+          {
+            "name": "cnpj",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão de monitoramento."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ausente ou desconhecida."
+          },
+          "404": {
+            "description": "Este CNPJ não está sendo acompanhado por esta sessão."
+          }
+        }
+      }
+    },
+    "/api/me/monitor/alerts": {
+      "get": {
+        "operationId": "get_api_me_monitor_alerts",
+        "summary": "Os alertas gerados para os CNPJs que esta sessão acompanha.",
+        "description": "`retidos` traz o que existe e não foi entregue — normalmente por não haver e-mail confirmado na sessão.\nDevolve: { ok, alerts, retidos }",
+        "parameters": [
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão de monitoramento."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, alerts, retidos }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Alertas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ausente ou desconhecida."
+          }
+        }
+      }
+    },
+    "/api/monitor/changes/{cnpj}": {
+      "get": {
+        "operationId": "get_api_monitor_changes_by_cnpj",
+        "summary": "O histórico de alterações cadastrais de um CNPJ.",
+        "description": "É o que o monitoramento observa: cada linha diz o que mudou, de que valor para qual, e quando.\nDevolve: { ok, cnpj, cnpjFormatted, changes }",
+        "parameters": [
+          {
+            "name": "cnpj",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-radar-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "UUID da sessão de monitoramento."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ ok, cnpj, cnpjFormatted, changes }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricoCnpj"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ausente ou desconhecida."
+          },
+          "404": {
+            "description": "CNPJ sem histórico ou fora da base."
+          }
+        }
+      }
+    },
+    "/api/contato": {
+      "post": {
+        "operationId": "contact",
+        "summary": "Fala com o suporte: humano resolve Turnstile, agente paga $0.10 em x402.",
+        "description": "O primeiro envio de agente é livre; depois o backoff é 60s dobrando até o teto de 1 hora, informado em `Retry-After`. `POST /api/contact` é o mesmo recurso com os campos em inglês.\nDevolve: { ok }",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "description": "Como chamar quem escreveu."
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Para onde responder."
+                  },
+                  "mensagem": {
+                    "type": "string",
+                    "description": "O que você quer dizer."
+                  },
+                  "aberto_em": {
+                    "type": "integer",
+                    "description": "Momento em que o formulário abriu; é anti-robô do caminho humano."
+                  },
+                  "turnstile": {
+                    "type": "string",
+                    "description": "Resposta do Turnstile; presente só no caminho humano."
+                  }
+                },
+                "required": [
+                  "nome",
+                  "email",
+                  "mensagem"
+                ]
+              },
+              "example": {
+                "nome": "…",
+                "email": "a@example.com",
+                "mensagem": "…",
+                "aberto_em": 0,
+                "turnstile": "(humano)"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Campo obrigatório faltando."
+          },
+          "402": {
+            "description": "Cota estourada. A resposta traz `accepts[]` (x402, USDC na Base): pague e repita a mesma chamada com `X-PAYMENT`."
+          },
+          "429": {
+            "description": "Backoff de agente: espere o `Retry-After`."
+          }
+        }
+      }
+    },
+    "/api/contact": {
+      "post": {
+        "operationId": "post_api_contact",
+        "summary": "O mesmo contato de `/api/contato`, com os nomes de campo em inglês.",
+        "description": "Existe porque agente que chegou pelo `llms.txt` de outro produto do mesmo dono já sabe mandar `name`/`email`/`message`. Mesmo backoff, mesmo preço.\nDevolve: { ok }",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Como chamar quem escreveu."
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Para onde responder."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "O que você quer dizer."
+                  },
+                  "form_ts": {
+                    "type": "integer",
+                    "description": "Momento em que o formulário abriu; é anti-robô do caminho humano."
+                  }
+                },
+                "required": [
+                  "name",
+                  "email",
+                  "message"
+                ]
+              },
+              "example": {
+                "name": "…",
+                "email": "…",
+                "message": "…",
+                "form_ts": 0
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Campo obrigatório faltando."
+          },
+          "402": {
+            "description": "Cota estourada. A resposta traz `accepts[]` (x402, USDC na Base): pague e repita a mesma chamada com `X-PAYMENT`."
+          },
+          "429": {
+            "description": "Backoff de agente: espere o `Retry-After`."
+          }
+        }
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "operationId": "get_api_metrics",
+        "summary": "Métricas operacionais: sem token, visitas de hoje e uso; com o token do operador, a série de 7 dias.",
+        "description": "Conta visitantes distintos e **não** conta autocomplete — senão o painel mediria tecla, não gente. Sem `Authorization` devolve só `app`, `today_visits` e `usage`, com 5 min de cache na borda — é o que a linha de estado do rodapé lê, como nos outros produtos. Com `Bearer METRICS_TOKEN`, a resposta completa da origem (`days`, `accounts`), sem cache.\nDevolve: { app, today_visits, days, usage, accounts }",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "`Bearer <METRICS_TOKEN>`, só para a série completa do operador."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ app, today_visits, days, usage, accounts }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Metricas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token do operador errado."
+          },
+          "503": {
+            "description": "Sem os secrets configurados no ambiente."
+          }
+        }
+      }
+    },
+    "/api/credito": {
+      "post": {
+        "operationId": "post_api_credito",
+        "summary": "Recarrega crédito pré-pago: paga uma vez com x402 e recebe o token que desconta em qualquer API da casa.",
+        "description": "Devolve: { token, saldo_usd, guarde, usar, saldo_em }",
+        "parameters": [
+          {
+            "name": "usd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Pacote: 1, 5, 10 ou 25 dólares."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ token, saldo_usd, guarde, usar, saldo_em }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "Token portador do saldo (`cred_…`). Mostrado UMA vez — não há como recuperá-lo."
+                    },
+                    "saldo_usd": {
+                      "type": "string",
+                      "description": "Saldo creditado."
+                    },
+                    "guarde": {
+                      "type": "string",
+                      "description": "Aviso de que o token é o portador do crédito."
+                    },
+                    "usar": {
+                      "type": "string",
+                      "description": "Como apresentar o token nas rotas pagas."
+                    },
+                    "saldo_em": {
+                      "type": "string",
+                      "description": "Onde consultar saldo e extrato."
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "saldo_usd",
+                    "guarde",
+                    "usar",
+                    "saldo_em"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pacote fora da lista (1, 5, 10 ou 25)."
+          },
+          "402": {
+            "description": "Sem pagamento — o corpo traz `accepts[]` do x402."
+          }
+        }
+      },
+      "get": {
+        "operationId": "get_api_credito",
+        "summary": "Saldo e extrato do crédito — as últimas movimentações, sem devolver o token.",
+        "description": "Devolve: { saldo_micros, saldo_usd, criado_em, movimentos }",
+        "responses": {
+          "200": {
+            "description": "{ saldo_micros, saldo_usd, criado_em, movimentos }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saldo_micros": {
+                      "type": "integer",
+                      "description": "Saldo em micro-dólares (1e-6 USD)."
+                    },
+                    "saldo_usd": {
+                      "type": "string",
+                      "description": "Saldo formatado."
+                    },
+                    "criado_em": {
+                      "type": "string",
+                      "description": "Quando o crédito foi aberto."
+                    },
+                    "movimentos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Entradas e saídas recentes, com produto e recurso."
+                    }
+                  },
+                  "required": [
+                    "saldo_micros",
+                    "saldo_usd",
+                    "criado_em",
+                    "movimentos"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem token ou token desconhecido."
+          }
+        }
+      }
+    }
+  }
+}

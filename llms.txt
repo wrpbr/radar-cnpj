@@ -1,0 +1,72 @@
+# Radar CNPJ
+
+> Produto principal: POST /api/avaliar — ideia em texto → oferta formal na Receita (CNAE, lugar, contagens).
+> Não estima volume de busca nem promete renda passiva.
+> Também consulta, busca por IA e monitoramento anônimo de CNPJ.
+> Front em https://radar-cnpj.com — proxy fino; origem api.radar-cnpj.com.
+> Cliente principal: agente de IA.
+
+## Descoberta
+
+- [Índice da API](https://radar-cnpj.com/api/)
+- [llms.txt](https://radar-cnpj.com/llms.txt): este arquivo
+- [OpenAPI](https://radar-cnpj.com/openapi.json)
+- [Health](https://radar-cnpj.com/api/health)
+- UI humana: botão **API** no topo + **Hub de recursos para agentes** no rodapé (mesmos links).
+
+## Endpoints principais
+
+- `GET /okf/:arquivo` — Bundle OKF (Open Knowledge Format v0.1): markdown com frontmatter para o agente ler o produto inteiro sem parsear HTML. (auth: none)
+- `GET /.well-known/:arquivo` — Descoberta de máquina antes da home: `api-catalog` (RFC 9727, linkset com a API e o MCP), `security.txt` (RFC 9116) e `mcp-registry-auth` (chave do registro oficial de MCP). (auth: none)
+- `GET /apis.json` — APIs.json (apisjson.org, 0.19): o índice que o APIs.io colhe — a API, o MCP, OpenAPI, guia e bundle OKF num arquivo só. Também em `/.well-known/apis.json`. (auth: none)
+- `POST /mcp` — Servidor MCP por HTTP (Streamable HTTP, JSON-RPC 2.0) — pluga no cliente sem instalar nada. (auth: none)
+- `POST /api/avaliar` — Cola uma ideia de negócio em texto e recebe a ficha da oferta formal na Receita. (auth: none)
+- `GET /api/cnpj/:cnpj` — A ficha cadastral completa de uma empresa, pelos 14 dígitos do CNPJ. (auth: none)
+- `GET /api/busca` — Busca empresas por termo e/ou filtros avançados, paginada. (auth: none)
+- `GET /api/export` — Exporta o resultado da busca em CSV ou JSON, com os mesmos filtros dela. (auth: none)
+- `GET /api/sugerir` — Autocomplete de empresas e termos, para montar a lista enquanto a pessoa digita. (auth: none)
+- `GET /api/ref` — Vocabulários oficiais para montar seletor: CNAE, município e natureza jurídica. (auth: none)
+- `POST /api/ia` — Transforma um texto livre nos filtros normalizados que a busca aceita. (auth: none)
+- `POST /api/ia/jobs` — Enfileira a mesma tradução de texto para filtros, quando a síncrona não cabe no tempo. (auth: none)
+- `GET /api/ia/jobs/:id` — Consulta o trabalho de IA enfileirado; quando pronto, devolve os filtros. (auth: none)
+- `GET /api/local` — Cidade e UF de quem está chamando, pela borda da Cloudflare. (auth: none)
+- `GET /api/municipio-proximo` — O município do IBGE mais próximo de um par de coordenadas, com o bairro do CNEFE. (auth: none)
+- `POST /api/monitor/session` — Cria uma sessão anônima de monitoramento e devolve o uuid dela. (auth: none)
+- `PUT /api/monitor/session/email` — Cadastra o e-mail que vai receber os alertas desta sessão. (auth: session)
+- `GET /api/me/monitor/watches` — Os CNPJs que esta sessão acompanha, com a cota aplicada pela origem. (auth: session)
+- `POST /api/me/monitor/watch` — Passa a acompanhar um CNPJ. Os primeiros 10 da sessão são grátis; a partir daí, x402 por 30 dias. (auth: session)
+- `DELETE /api/me/monitor/watch/:cnpj` — Para de acompanhar um CNPJ. A chave é o próprio CNPJ, não um id. (auth: session)
+- `GET /api/me/monitor/alerts` — Os alertas gerados para os CNPJs que esta sessão acompanha. (auth: session)
+- `GET /api/monitor/changes/:cnpj` — O histórico de alterações cadastrais de um CNPJ. (auth: session)
+- `POST /api/contato` — Fala com o suporte: humano resolve Turnstile, agente paga $0.10 em x402. (auth: none)
+- `GET /api/metrics` — Métricas operacionais: sem token, visitas de hoje e uso; com o token do operador, a série de 7 dias. (auth: none)
+- `POST /api/credito` — Recarrega crédito pré-pago: paga uma vez com x402 e recebe o token que desconta em qualquer API da casa. (auth: none)
+- `GET /api/credito` — Saldo e extrato do crédito — as últimas movimentações, sem devolver o token. (auth: credito)
+
+## Contato agente
+
+- `POST /api/contato` sem captcha → **HTTP 402** x402 **$0.10** USDC.
+
+## Cota
+
+- Grátis: avaliar ideia (`POST /api/avaliar`) — sem cota.
+- Grátis: consulta e busca de CNPJ — sem cota (cache de borda 6h).
+- Grátis: monitoramento de CNPJ — 10 watches por sessão (a cota vem da origem: `quota` em `GET /api/me/monitor/watches`).
+- Pago: watch de monitoramento além dos 10 da sessão, por 30 dias — **$0.50** USDC via x402.
+- Pago: contato de agente — **$0.10** USDC via x402.
+
+Estourou a franquia → **402** com `accepts[]` (x402, USDC na Base). Pague e repita a mesma chamada com `X-PAYMENT`.
+
+Números em vigor: https://radar-cnpj.com/api/
+
+## MCP
+
+- **Endpoint:** `POST https://radar-cnpj.com/mcp` — Streamable HTTP, JSON-RPC 2.0. Não precisa instalar nada.
+- Confira com `GET https://radar-cnpj.com/mcp` (cartão do servidor) ou `tools/list`.
+- Cada tool é uma chamada nesta mesma API — o MCP não tem backend próprio.
+- Credencial (`X-Guest-Token`, `Authorization`, `X-PAYMENT`) vai no header e é repassada.
+
+## Skill
+
+- `.agents/skills/radar-cnpj/SKILL.md` — paridade com esta superfície.
+- **Paridade:** mexeu na UI/API → apidocs + skill + este arquivo no mesmo PR.
