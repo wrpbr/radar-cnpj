@@ -1,92 +1,96 @@
-# Radar CNPJ
+# Radar CNPJ — skill and MCP server for AI agents
 
-> Vale abrir isto aqui? Consulta de CNPJ, avaliação de ideia por região e monitoramento, dos dados abertos da Receita Federal.
+<img src="assets/icon.png" alt="Radar CNPJ" width="72" align="right">
 
-**In English.** Radar CNPJ serves the open CNPJ data of Brazil's Receita Federal, reloaded on every dump: the full record of any company, search by name, activity (CNAE) and place, an idea evaluation that turns a sentence into a CNAE, a region and counts, and CNPJ monitoring. Free lookups, no key; responses in Portuguese; remote MCP server.
+Radar CNPJ lets an AI agent check Brazilian companies. One lookup returns the Receita Federal CNPJ record, the
+partners, the sanctions, the federal tax debt, the government contracts and data from 40+ public databases, each
+with its source date. This repository packages the Radar CNPJ skill and the connection to its remote MCP server
+for Claude Code, Codex, Cursor and other agents.
 
-**No ar:** https://radar-cnpj.com · **Índice da API:** https://radar-cnpj.com/api/ · **OpenAPI:** https://radar-cnpj.com/openapi.json · **Servidor MCP:** https://radar-cnpj.com/mcp · **Docs para agentes:** https://radar-cnpj.com/llms.txt
+**Site:** https://radar-cnpj.com · **MCP server:** `https://radar-cnpj.com/mcp` · **Prices:** https://radar-cnpj.com/pricing ·
+**API docs:** https://radar-cnpj.com/developers
 
-## O que faz
+## What your agent can do
 
-O Radar CNPJ é a base de CNPJ da Receita Federal organizada para decidir, não só consultar.
+- Look up a company by CNPJ: status, activities (CNAE), address, partners, sanctions (CEIS, CNEP, CEPIM, TCU and
+  CNIA), federal tax debt and contracts with the government.
+- Search companies by name, trade name, partner, phone, address or activity, in a state or a city.
+- Check a list of suppliers or customers in one call.
+- Evaluate a business idea: count the active, opened and closed companies of an activity in a place.
+- Monitor a CNPJ and read its changes.
 
-O que faz: ficha de qualquer CNPJ (situação, atividades, sócios como a fonte publica, endereço), busca por nome, atividade e lugar, e a avaliação de uma ideia — "vale abrir uma padaria em Águas Claras?" vira um CNAE, uma região e uma contagem de quem já está lá e de quem fechou. O monitoramento avisa quando um CNPJ que você acompanha muda de situação, endereço ou quadro.
+Try: *"Check CNPJ 33.000.167/0001-01 for sanctions and federal tax debt."* or
+*"How many bakeries are active in Águas Claras, DF?"*
 
-## Começo rápido (sem cadastro)
+## Install
 
-Ficha completa pelo CNPJ (cache de 6 h):
+Claude Code, as a plugin with the skill and the MCP server:
 
-```bash
-curl -s https://radar-cnpj.com/api/cnpj/33000167000101
+```
+/plugin marketplace add wrpbr/radar-cnpj
+/plugin install radar-cnpj@radar-cnpj
 ```
 
-Busca por termo e UF:
+Any agent that reads Agent Skills (Claude Code, Codex, Cursor, OpenCode and others):
 
 ```bash
-curl -s 'https://radar-cnpj.com/api/busca?q=padaria&uf=DF'
+npx skills add wrpbr/radar-cnpj
 ```
 
-Vocabulário oficial (CNAE, município ou natureza):
+Only the MCP server (remote, Streamable HTTP, no key for the free tools):
 
 ```bash
-curl -s 'https://radar-cnpj.com/api/ref?tipo=cnae&q=padaria'
+claude mcp add --transport http radar-cnpj https://radar-cnpj.com/mcp   # Claude Code
+codex mcp add radar-cnpj --url https://radar-cnpj.com/mcp               # Codex
 ```
-
-Avaliação de ideia:
-
-```bash
-curl -s -X POST https://radar-cnpj.com/api/avaliar -H 'content-type: application/json' -d '{"texto":"padaria em Águas Claras"}'
-```
-
-## Servidor MCP (remoto, sem instalar nada)
-
-Streamable HTTP sobre a mesma API pública. Cada tool é uma chamada nesta API; o `operationId` do OpenAPI é o nome da tool. Cartão do servidor: `GET https://radar-cnpj.com/mcp`.
-
-Claude Code:
-
-```bash
-claude mcp add --transport http radar-cnpj https://radar-cnpj.com/mcp
-```
-
-Cursor (`.cursor/mcp.json`):
 
 ```json
-{
-  "mcpServers": {
-    "radar-cnpj": {
-      "url": "https://radar-cnpj.com/mcp"
-    }
-  }
-}
+{ "mcpServers": { "radar-cnpj": { "url": "https://radar-cnpj.com/mcp" } } }
 ```
 
-Tools principais: `get_cnpj`, `search`, `avaliar`, `suggest`, `ref`, `ia_filters`, `add_watch`, `list_watches`.
+The JSON above goes in `.cursor/mcp.json` for Cursor and in the MCP settings of most other clients. In Claude.ai and
+Claude Desktop, open Settings → Connectors → Add custom connector and paste the server address.
 
-## Preço
+## Price
 
-**Grátis.** Consulta de CNPJ, busca, exportação e avaliação de ideia, sem cadastro e sem chave; dez CNPJs monitorados por sessão.
+The CNPJ record, the search, the idea evaluation and the export are free and need no key. The full check gives a
+free allowance each day; after it, the check uses a pack or a plan. The bulk check, the company dossier and the
+monitoring of more than 10 companies are paid. Plans do not renew automatically. You can pay with Pix in reais, with
+a prepaid credit or per request with x402 (USDC). The current prices are at https://radar-cnpj.com/pricing.
 
-**Pago.** Slot de vigia extra: US$ 0,50 por 30 dias; contato de agente US$ 0,10. Por requisição (x402) ou crédito pré-pago.
+## What the plugin sends
 
-## O que não é
+The skill tells the agent to call the Radar CNPJ API at radar-cnpj.com. The MCP server also runs at radar-cnpj.com.
+Your queries (CNPJ numbers, search terms and places) go to radar-cnpj.com over HTTPS. A credit token goes only when
+you give one for a paid call. The plugin runs no local program and reads no local file.
 
-Não é fonte oficial (é a base pública, recarregada a cada dump) e não serve para spam nem para decisão automatizada sobre pessoas.
+## Data and limits
 
-## Arquivos deste repositório
+The data comes from the public CNPJ dump of Receita Federal and from the public databases that each answer names,
+with their dates. Radar CNPJ is not an official certificate. Partner names, phones and e-mails are masked by
+default. Use personal data only for a legitimate purpose, as the Brazilian data protection law (LGPD) requires.
 
-| | |
+## Em português
+
+O Radar CNPJ deixa o agente de IA consultar empresas brasileiras. Ele traz a ficha da Receita, os sócios, as
+sanções, a dívida ativa da União, os contratos com o governo e mais de 40 bases públicas, com a data de cada fonte.
+Este repositório traz a skill e a conexão com o servidor MCP remoto. Instale com os comandos acima. A consulta de
+CNPJ, a busca e a avaliação de ideia são grátis e não pedem chave. Os preços estão em https://radar-cnpj.com/pricing.
+
+## Files
+
+| File | What it is |
 |---|---|
-| `README.md` | esta página |
-| `openapi.json` | documento OpenAPI 3; `operationId` = nome da tool MCP |
-| `llms.txt` | guia curto para agentes (rotas, auth, preço, MCP) |
-| `llms-full.txt` | referência completa: parâmetros, corpo, resposta campo a campo, erros (quando publicada) |
-| `apis.json` | índice APIs.json (APIs.io) |
-| `mcp/server.json` | manifesto publicado no registro oficial de MCP (`com.radar-cnpj/radar-cnpj`) |
-| `okf/` | bundle OKF: markdown com front-matter (índice, sobre, API, FAQ) |
-| `examples/` | `curl.sh` e `python.py` com as chamadas grátis acima |
+| `skills/radar-cnpj/SKILL.md` | The skill: which tool answers which question, and the rules for paid calls and personal data |
+| `.mcp.json` | The remote MCP server of the plugin |
+| `.claude-plugin/plugin.json` | The plugin manifest |
+| `.claude-plugin/marketplace.json` | Lets Claude Code add this repository as a plugin marketplace |
+| `server.json` | The manifest in the official MCP registry (`com.radar-cnpj/radar-cnpj`) |
+| `glama.json` | The maintainer for the Glama MCP directory |
 
-## Sobre este repositório
+## License and contact
 
-Este repositório espelha as superfícies públicas e legíveis por máquina do Radar CNPJ, como servidas em https://radar-cnpj.com: o documento OpenAPI, o guia `llms.txt`, o manifesto do registro MCP, o bundle OKF e o índice APIs.json. O produto em si não é código aberto; o espelho existe para a API e o servidor MCP poderem ser encontrados, lidos e linkados daqui. Os arquivos são regenerados das superfícies no ar (última sincronização: 2026-09-05); se algo aqui divergir do site, vale o site.
-
-Issues e sugestões são bem-vindas aqui. Contato: contato@radar-cnpj.com. Autor: Wendel ([@wrpbr](https://github.com/wrpbr)).
+The files in this repository are under the MIT-0 license. The Radar CNPJ service and its data are not part of this
+license: their use follows the [terms of use](https://radar-cnpj.com/termos) and the
+[privacy policy](https://radar-cnpj.com/privacidade). For questions or problems, open an issue here or write to
+contato@radar-cnpj.com.

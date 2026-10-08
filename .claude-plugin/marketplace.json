@@ -1,0 +1,16 @@
+{
+  "name": "radar-cnpj",
+  "description": "Check Brazilian companies by CNPJ: Receita Federal record, partners, sanctions, federal tax debt, government contracts and 40+ public databases. Search, bulk supplier checks, business idea counts and monitoring, through a skill and the remote MCP server.",
+  "owner": {
+    "name": "Radar CNPJ",
+    "email": "contato@radar-cnpj.com",
+    "url": "https://radar-cnpj.com"
+  },
+  "plugins": [
+    {
+      "name": "radar-cnpj",
+      "source": "./",
+      "category": "data"
+    }
+  ]
+}
