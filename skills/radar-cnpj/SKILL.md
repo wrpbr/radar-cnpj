@@ -13,7 +13,8 @@ activity exist in a place.
 
 ## Connect
 
-- MCP server (preferred): `https://radar-cnpj.com/mcp`. Transport: Streamable HTTP. The free tools need no key.
+- MCP server (preferred): `https://radar-cnpj.com/mcp?checkout=site`. Transport: Streamable HTTP. The free tools
+  need no key. With `checkout=site`, the person buys on the site and the agent never pays.
 - HTTP API: base URL `https://radar-cnpj.com`. Each MCP tool calls one route of this API.
 - If the MCP tools are not available, call the HTTP routes with `curl` or with your fetch tool.
 - Discovery: `GET https://radar-cnpj.com/api/` lists the routes, prices and limits.
@@ -34,7 +35,6 @@ activity exist in a place.
 | `dossier_cnpj` | `POST /api/dossie/{cnpj}` | Get the company dossier with the live misconduct check and a risk light. | Per company |
 | `add_watch` / `list_watches` | `/api/me/monitor/watch(es)` | Monitor a CNPJ for changes. Send a prepaid credit token in `credito`. | 10 free, then per CNPJ |
 | `consulta_planos` | `GET /api/consulta` | Read the free allowance of today, the plans and your balance. | Free |
-| `consulta_comprar` | `POST /api/consulta/planos/{oferta}` | Buy a lookup pack or plan. | Paid |
 | `pricing` | `GET /api/pricing` | Read the current prices and free allowances. | Free |
 | `health` | `GET /api/health` | Read the date of the Receita data (`import.dump_date`). | Free |
 
@@ -43,14 +43,12 @@ activity exist in a place.
 1. Start with the free tools. Use `get_cnpj` or `search` before a paid lookup.
 2. Before a call that spends money or balance, read the price from `pricing` or `consulta_planos`.
    Do not use a price from memory.
-3. Do not buy, pay or reveal personal data until the user approves the item and the amount.
-4. If a call returns HTTP 402, show the offer and the price to the user. After approval, pay and send the
-   same call again:
-   - with a prepaid credit token: header `Authorization: Bearer cred_…`, or the `credito` or
-     `credit_token` tool argument;
-   - with x402: pay one entry of `accepts[]` (USDC on Base) and send the `X-PAYMENT` header.
-5. When you retry a paid call, keep the same `Idempotency-Key` or the same `compra` mark.
-   The service does not charge the same request twice.
+3. Do not spend balance or reveal personal data until the user approves the item and the amount.
+4. Never pay by yourself. If a call returns HTTP 402, show the price and https://radar-cnpj.com/pricing to the
+   user. The person buys on the site. After the purchase, send the same call again with the person's prepaid
+   credit token: header `Authorization: Bearer cred_…`, or the `credito` or `credit_token` tool argument.
+5. When you retry a paid call, keep the same `Idempotency-Key`. The service does not charge the same request
+   twice.
 6. Keep tokens (`cred_…`, `mmk_…`) secret. Do not write them in files, logs or answers.
 7. Partner names, phones and e-mails are personal data under the Brazilian data protection law (LGPD).
    Use them only for the legitimate purpose that the user states.
@@ -60,13 +58,13 @@ activity exist in a place.
 9. Lists return up to 20 items per page. Follow `links.proximo`. Do not guess IDs. Do not scrape HTML pages.
 10. If you get HTTP 429 or 503, wait for the time in `Retry-After` and try once more.
 
-## Pay
+## Buy
 
-- Prepaid credit: `POST https://radar-cnpj.com/api/credito?usd=5` returns 402. After the payment, it returns
-  a `cred_…` token one time only. The same token works in Radar CNPJ, PontoFato and EditalMD.
-- Pix in reais (Brazil): `GET https://radar-cnpj.com/api/credito/pix` gives the packs and the steps.
-- Lookup plans: `consulta_planos` lists them and `consulta_comprar` buys one. Plans do not renew automatically.
-- People can see prices and pay at https://radar-cnpj.com/pricing.
+- The person buys on the site: https://radar-cnpj.com/pricing shows the lookup plans, the packs and the prepaid
+  credit, with the prices. Plans do not renew automatically.
+- `consulta_planos` and `pricing` read the plans and the prices. They do not charge.
+- A prepaid credit gives a `cred_…` token one time only. The same token works in Radar CNPJ, PontoFato and
+  EditalMD.
 
 ## Examples
 

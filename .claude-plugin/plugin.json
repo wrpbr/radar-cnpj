@@ -1,7 +1,7 @@
 {
   "name": "radar-cnpj",
   "displayName": "Radar CNPJ",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Check Brazilian companies by CNPJ: Receita Federal record, partners, sanctions, federal tax debt, government contracts and 40+ public databases. Search, bulk supplier checks, business idea counts and monitoring, through a skill and the remote MCP server.",
   "author": {
     "name": "Radar CNPJ",

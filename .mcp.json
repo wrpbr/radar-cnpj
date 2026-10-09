@@ -2,7 +2,7 @@
   "mcpServers": {
     "radar-cnpj": {
       "type": "http",
-      "url": "https://radar-cnpj.com/mcp"
+      "url": "https://radar-cnpj.com/mcp?checkout=site"
     }
   }
 }

@@ -7,7 +7,7 @@ partners, the sanctions, the federal tax debt, the government contracts and data
 with its source date. This repository packages the Radar CNPJ skill and the connection to its remote MCP server
 for Claude Code, Codex, Cursor and other agents.
 
-**Site:** https://radar-cnpj.com · **MCP server:** `https://radar-cnpj.com/mcp` · **Prices:** https://radar-cnpj.com/pricing ·
+**Site:** https://radar-cnpj.com · **MCP server:** `https://radar-cnpj.com/mcp?checkout=site` · **Prices:** https://radar-cnpj.com/pricing ·
 **API docs:** https://radar-cnpj.com/developers
 
 ## What your agent can do
@@ -40,12 +40,12 @@ npx skills add wrpbr/radar-cnpj
 Only the MCP server (remote, Streamable HTTP, no key for the free tools):
 
 ```bash
-claude mcp add --transport http radar-cnpj https://radar-cnpj.com/mcp   # Claude Code
-codex mcp add radar-cnpj --url https://radar-cnpj.com/mcp               # Codex
+claude mcp add --transport http radar-cnpj 'https://radar-cnpj.com/mcp?checkout=site'   # Claude Code
+codex mcp add radar-cnpj --url 'https://radar-cnpj.com/mcp?checkout=site'               # Codex
 ```
 
 ```json
-{ "mcpServers": { "radar-cnpj": { "url": "https://radar-cnpj.com/mcp" } } }
+{ "mcpServers": { "radar-cnpj": { "url": "https://radar-cnpj.com/mcp?checkout=site" } } }
 ```
 
 The JSON above goes in `.cursor/mcp.json` for Cursor and in the MCP settings of most other clients. In Claude.ai and
@@ -55,8 +55,10 @@ Claude Desktop, open Settings → Connectors → Add custom connector and paste 
 
 The CNPJ record, the search, the idea evaluation and the export are free and need no key. The full check gives a
 free allowance each day; after it, the check uses a pack or a plan. The bulk check, the company dossier and the
-monitoring of more than 10 companies are paid. Plans do not renew automatically. You can pay with Pix in reais, with
-a prepaid credit or per request with x402 (USDC). The current prices are at https://radar-cnpj.com/pricing.
+monitoring of more than 10 companies are paid. You buy plans and prepaid credit on the site, and plans do not renew
+automatically. The plugin never pays: with `checkout=site`, the MCP server has no purchase tool and no payment
+argument. The agent shows the price and the link, and after your purchase it uses your credit token. The current
+prices are at https://radar-cnpj.com/pricing.
 
 ## What the plugin sends
 
@@ -75,7 +77,8 @@ default. Use personal data only for a legitimate purpose, as the Brazilian data 
 O Radar CNPJ deixa o agente de IA consultar empresas brasileiras. Ele traz a ficha da Receita, os sócios, as
 sanções, a dívida ativa da União, os contratos com o governo e mais de 40 bases públicas, com a data de cada fonte.
 Este repositório traz a skill e a conexão com o servidor MCP remoto. Instale com os comandos acima. A consulta de
-CNPJ, a busca e a avaliação de ideia são grátis e não pedem chave. Os preços estão em https://radar-cnpj.com/pricing.
+CNPJ, a busca e a avaliação de ideia são grátis e não pedem chave. A compra é sempre no site, e o plugin nunca paga
+sozinho. Os preços estão em https://radar-cnpj.com/pricing.
 
 ## Files
 
