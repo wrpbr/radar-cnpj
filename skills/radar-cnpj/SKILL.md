@@ -13,6 +13,11 @@ activity exist in a place.
 
 ## Connect
 
+HTML index pages are free for people and crawlers, without an API quota.
+JSON, Markdown, OKF and MCP index data calls have 1,000 free reads per day, IP and product.
+Above that allowance, US$1 buys 1,000 shared reads for 30 days without automatic renewal.
+See `/api-access-guide.md` for evaluation, purchase and retry instructions.
+
 - MCP server (preferred): `https://radar-cnpj.com/mcp?checkout=site`. Transport: Streamable HTTP. The free tools
   need no key. With `checkout=site`, the person buys on the site and the agent never pays.
 - HTTP API: base URL `https://radar-cnpj.com`. Each MCP tool calls one route of this API.
@@ -24,16 +29,19 @@ activity exist in a place.
 
 | Tool | HTTP | Use it to | Cost |
 |---|---|---|---|
+| `consulta_cadastro` | `GET /api/consulta/cadastro/{cnpj}` | Read basic company data without contacts or live analysis. | Free, no allowance consumed |
+| `consulta_endereco` | `GET /api/consulta/endereco/{cep}` | Read up to 20 addresses and 20 companies of a CEP. | Free, no allowance consumed |
 | `get_cnpj` | `GET /api/cnpj/{cnpj}` | Read the company record: status, activities, address, partners (masked), sanctions, tax debt, contracts. | Free |
 | `consulta_cnpj` | `GET /api/consulta/cnpj/{cnpj}` | Run the full check: live CNIA misconduct lookup, PEP partners, regulators, BNDES, federal payments, address on the map. | Daily free allowance, then balance |
 | `consulta_lote` | `POST /api/consulta/lote` | Check a list of supplier or customer CNPJs, one row each, up to 100 per call. | One lookup per valid CNPJ |
-| `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `endereco` or `cnae`. | Free |
+| `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `email`, `endereco` or `cnae`. | Free |
+| `suggest` | `GET /api/sugerir?q=` | Find up to eight companies by CNPJ, company or partner name, phone with area code, or full registered email. The API detects the input type. | Free |
 | `ref` | `GET /api/ref` | Find official codes. Set `tipo` to `cnae`, `municipio` or `natureza`. | Free |
 | `ia_filters` | `POST /api/ia` | Turn a plain-language request into search filters. It takes about 20 seconds. | Free |
 | `avaliar` | `POST /api/avaliar` | Map a business idea and place to a CNAE. Count active, opened and closed companies. | Free |
-| `reveal_cnpj` | `POST /api/revelar/{cnpj}` | Show partner names, phones and e-mail without the mask. | Per company; read `pricing` |
+| `reveal_cnpj` | `POST /api/revelar/{cnpj}` | Show partner names, phones and e-mail without the mask. | One paid lookup; no free allowance. Read `consulta_planos` |
 | `dossier_cnpj` | `POST /api/dossie/{cnpj}` | Get the company dossier with the live misconduct check and a risk light. | Per company |
-| `add_watch` / `list_watches` | `/api/me/monitor/watch(es)` | Monitor a CNPJ for changes. Send a prepaid credit token in `credito`. | 10 free, then per CNPJ |
+| `add_watch` / `list_watches` | `/api/me/monitor/watch(es)` | Monitor a CNPJ for changes. Send a prepaid credit token in `credito`. | One free; additional slots last 30 days, no automatic renewal |
 | `consulta_planos` | `GET /api/consulta` | Read the free allowance of today, the plans and your balance. | Free |
 | `pricing` | `GET /api/pricing` | Read the current prices and free allowances. | Free |
 | `health` | `GET /api/health` | Read the date of the Receita data (`import.dump_date`). | Free |
@@ -63,6 +71,9 @@ activity exist in a place.
 - The person buys on the site: https://radar-cnpj.com/pricing shows the lookup plans, the packs and the prepaid
   credit, with the prices. Plans do not renew automatically.
 - `consulta_planos` and `pricing` read the plans and the prices. They do not charge.
+- Reveals use a paid Lookup package. HTTP 402 includes `ofertas[]` with purchase links.
+  Send the API key or credit token of the package owner. The same owner can reopen the same company
+  without another debit. A failed lookup returns the unit.
 - A prepaid credit gives a `cred_…` token one time only. The same token works in Radar CNPJ, PontoFato and
   EditalMD.
 
@@ -81,6 +92,9 @@ curl -s -X POST https://radar-cnpj.com/api/avaliar \
 ```
 
 ## Limits
+
+- Read [company and supplier news](https://radar-cnpj.com/en/noticias/index.md).
+  Use the [free feed](https://radar-cnpj.com/en/noticias/feed.json). Cite the article date and original sources.
 
 - Radar CNPJ is not an official certificate. The data is the public Receita Federal dump and the listed
   public databases, each with its date.
