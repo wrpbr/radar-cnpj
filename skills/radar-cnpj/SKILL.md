@@ -31,7 +31,7 @@ See `/api-access-guide.md` for evaluation, purchase and retry instructions.
 |---|---|---|---|
 | `consulta_cadastro` | `GET /api/consulta/cadastro/{cnpj}` | Read basic company data without contacts or live analysis. | Free, no allowance consumed |
 | `consulta_endereco` | `GET /api/consulta/endereco/{cep}` | Read up to 20 addresses and 20 companies of a CEP. | Free, no allowance consumed |
-| `get_cnpj` | `GET /api/cnpj/{cnpj}` | Read the company record: status, activities, address, partners (masked), sanctions, tax debt, contracts. | Free |
+| `get_cnpj` | `GET /api/cnpj/{cnpj}` | Read the company record: status, activities, address, partners (masked), sanctions, tax debt, contracts. Accepts the 14-digit CNPJ and the alphanumeric one (12 letters or digits + 2 check digits). | Free |
 | `consulta_cnpj` | `GET /api/consulta/cnpj/{cnpj}` | Run the full check: live CNIA misconduct lookup, PEP partners, regulators, BNDES, federal payments, address on the map. | Daily free allowance, then balance |
 | `consulta_lote` | `POST /api/consulta/lote` | Check a list of supplier or customer CNPJs, one row each, up to 100 per call. | One lookup per valid CNPJ |
 | `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `email`, `endereco` or `cnae`. | Free |
@@ -71,6 +71,10 @@ See `/api-access-guide.md` for evaluation, purchase and retry instructions.
 - The person buys on the site: https://radar-cnpj.com/pricing shows the lookup plans, the packs and the prepaid
   credit, with the prices. Plans do not renew automatically.
 - `consulta_planos` and `pricing` read the plans and the prices. They do not charge.
+- The HTTP API also supports lookup purchases without an account through x402 v1 or v2.
+  The paying wallet owns the package. Its `mmw_…` credential comes from
+  `/api/auth/wallet/agent/start` and `/api/auth/wallet/agent/token`.
+  The MCP connection above keeps checkout on the site.
 - Reveals use a paid Lookup package. HTTP 402 includes `ofertas[]` with purchase links.
   Send the API key or credit token of the package owner. The same owner can reopen the same company
   without another debit. A failed lookup returns the unit.
