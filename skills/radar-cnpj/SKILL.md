@@ -15,11 +15,11 @@ activity exist in a place.
 
 HTML index pages are free for people and crawlers, without an API quota.
 JSON, Markdown, OKF and MCP index data calls have 1,000 free reads per day, IP and product.
-Above that allowance, US$1 buys 1,000 shared reads for 30 days without automatic renewal.
-See `/api-access-guide.md` for evaluation, purchase and retry instructions.
+Above that allowance, the MCP answers `free_limit`. On the HTTP API, US$1 buys 1,000 shared reads for 30 days
+without automatic renewal: see `/api-access-guide.md` for evaluation, purchase and retry instructions.
 
-- MCP server (preferred): `https://radar-cnpj.com/mcp?checkout=site`. Transport: Streamable HTTP. The free tools
-  need no key. With `checkout=site`, the person buys on the site and the agent never pays.
+- MCP server (preferred): `https://radar-cnpj.com/mcp?checkout=site`. Transport: Streamable HTTP. Every MCP tool is
+  free, within its free limits: no key and no payment.
 - HTTP API: base URL `https://radar-cnpj.com`. Each MCP tool calls one route of this API.
 - If the MCP tools are not available, call the HTTP routes with `curl` or with your fetch tool.
 - Discovery: `GET https://radar-cnpj.com/api/` lists the routes, prices and limits.
@@ -32,29 +32,26 @@ See `/api-access-guide.md` for evaluation, purchase and retry instructions.
 | `consulta_cadastro` | `GET /api/consulta/cadastro/{cnpj}` | Read basic company data without contacts or live analysis. | Free, no allowance consumed |
 | `consulta_endereco` | `GET /api/consulta/endereco/{cep}` | Read up to 20 addresses and 20 companies of a CEP. | Free, no allowance consumed |
 | `get_cnpj` | `GET /api/cnpj/{cnpj}` | Read the company record: status, activities, address, partners (masked), sanctions, tax debt, contracts. Accepts the 14-digit CNPJ and the alphanumeric one (12 letters or digits + 2 check digits). | Free |
-| `consulta_cnpj` | `GET /api/consulta/cnpj/{cnpj}` | Run the full check: live CNIA misconduct lookup, PEP partners, regulators, BNDES, federal payments, address on the map. | Daily free allowance, then balance |
-| `consulta_lote` | `POST /api/consulta/lote` | Check a list of supplier or customer CNPJs, one row each, up to 100 per call. | One lookup per valid CNPJ |
+| `consulta_cnpj` | `GET /api/consulta/cnpj/{cnpj}` | Run the full check: live CNIA misconduct lookup, PEP partners, regulators, BNDES, federal payments, address on the map. | Free, daily limit |
 | `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `email`, `endereco` or `cnae`. | Free |
 | `suggest` | `GET /api/sugerir?q=` | Find up to eight companies by CNPJ, company or partner name, phone with area code, or full registered email. The API detects the input type. | Free |
 | `ref` | `GET /api/ref` | Find official codes. Set `tipo` to `cnae`, `municipio` or `natureza`. | Free |
 | `ia_filters` | `POST /api/ia` | Turn a plain-language request into search filters. It takes about 20 seconds. | Free |
 | `avaliar` | `POST /api/avaliar` | Map a business idea and place to a CNAE. Count active, opened and closed companies. | Free |
-| `reveal_cnpj` | `POST /api/revelar/{cnpj}` | Show partner names, phones and e-mail without the mask. | One paid lookup; no free allowance. Read `consulta_planos` |
-| `dossier_cnpj` | `POST /api/dossie/{cnpj}` | Get the company dossier with the live misconduct check and a risk light. | Per company |
-| `add_watch` / `list_watches` | `/api/me/monitor/watch(es)` | Monitor a CNPJ for changes. Send a prepaid credit token in `credito`. | One free; additional slots last 30 days, no automatic renewal |
-| `consulta_planos` | `GET /api/consulta` | Read the free allowance of today, the plans and your balance. | Free |
-| `pricing` | `GET /api/pricing` | Read the current prices and free allowances. | Free |
 | `health` | `GET /api/health` | Read the date of the Receita data (`import.dump_date`). | Free |
+
+The unmasked partner contacts, the dossier, the bulk check of a CNPJ list (`POST /api/consulta/lote`) and the CNPJ
+monitor are paid features of the site and the HTTP API (below). They are not MCP tools.
 
 ## Rules
 
-1. Start with the free tools. Use `get_cnpj` or `search` before a paid lookup.
-2. Before a call that spends money or balance, read the price from `pricing` or `consulta_planos`.
-   Do not use a price from memory.
-3. Do not spend balance or reveal personal data until the user approves the item and the amount.
-4. Never pay by yourself. If a call returns HTTP 402, show the price and https://radar-cnpj.com/pricing to the
-   user. The person buys on the site. After the purchase, send the same call again with the person's prepaid
-   credit token: header `Authorization: Bearer cred_…`, or the `credito` or `credit_token` tool argument.
+1. Start with `get_cnpj` or `search`. Use `consulta_cnpj` for the full check.
+2. If an MCP tool answers `free_limit`, tell the user that the free limit for that action is used up.
+3. On the HTTP API, read the price from `GET /api/pricing` before a paid call. Do not use a price from memory.
+   Do not spend balance or reveal personal data until the user approves the item and the amount.
+4. Never pay by yourself. On the HTTP API, a paid route returns HTTP 402: show the price and
+   https://radar-cnpj.com/pricing to the user. The person buys on the site. Then send the same call again with the
+   person's prepaid credit token in the header `Authorization: Bearer cred_…`.
 5. When you retry a paid call, keep the same `Idempotency-Key`. The service does not charge the same request
    twice.
 6. Keep tokens (`cred_…`, `mmk_…`) secret. Do not write them in files, logs or answers.
@@ -66,15 +63,15 @@ See `/api-access-guide.md` for evaluation, purchase and retry instructions.
 9. Lists return up to 20 items per page. Follow `links.proximo`. Do not guess IDs. Do not scrape HTML pages.
 10. If you get HTTP 429 or 503, wait for the time in `Retry-After` and try once more.
 
-## Buy
+## Paid features (site and HTTP API)
 
 - The person buys on the site: https://radar-cnpj.com/pricing shows the lookup plans, the packs and the prepaid
   credit, with the prices. Plans do not renew automatically.
-- `consulta_planos` and `pricing` read the plans and the prices. They do not charge.
+- `GET /api/consulta` and `GET /api/pricing` read the plans and the prices. They do not charge.
 - The HTTP API also supports lookup purchases without an account through x402 v1 or v2.
   The paying wallet owns the package. Its `mmw_…` credential comes from
   `/api/auth/wallet/agent/start` and `/api/auth/wallet/agent/token`.
-  The MCP connection above keeps checkout on the site.
+  The MCP connection above never charges.
 - Reveals use a paid Lookup package. HTTP 402 includes `ofertas[]` with purchase links.
   Send the API key or credit token of the package owner. The same owner can reopen the same company
   without another debit. A failed lookup returns the unit.
