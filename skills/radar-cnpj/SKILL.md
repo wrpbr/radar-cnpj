@@ -36,6 +36,7 @@ without automatic renewal: see `/api-access-guide.md` for evaluation, purchase a
 | `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `email`, `endereco` or `cnae`. | Free |
 | `suggest` | `GET /api/sugerir?q=` | Find up to eight companies by CNPJ, company or partner name, phone with area code, or full registered email. The API detects the input type. | Free |
 | `ref` | `GET /api/ref` | Find official codes. Set `tipo` to `cnae`, `municipio` or `natureza`. | Free |
+| `search_construction` | `GET /api/obras` | Find works by CNO, CNPJ, or city and state. Filter by area, construction type and status. | Free |
 | `ia_filters` | `POST /api/ia` | Turn a plain-language request into search filters. It takes about 20 seconds. | Free |
 | `avaliar` | `POST /api/avaliar` | Map a business idea and place to a CNAE. Count active, opened and closed companies. | Free |
 | `health` | `GET /api/health` | Read the date of the Receita data (`import.dump_date`). | Free |
@@ -69,6 +70,9 @@ monitor are paid features of the site and the HTTP API (below). They are not MCP
   credit, with the prices. Plans do not renew automatically.
 - `GET /api/consulta` and `GET /api/pricing` read the plans and the prices. They do not charge.
 - The HTTP API also supports lookup purchases without an account through x402 v1 or v2.
+- After the free lookups of the day, a lookup, a reveal, a bulk check and the dossier can also be paid in the call
+  itself, without an account or package: the 402 brings `accepts` (x402) and `por_chamada`. A company account uses a
+  prepaid credit token as its key (`Authorization: Bearer cred_…`), with no daily cap. Prices: `GET /api/pricing`.
   The paying wallet owns the package. Its `mmw_…` credential comes from
   `/api/auth/wallet/agent/start` and `/api/auth/wallet/agent/token`.
   The MCP connection above never charges.
@@ -79,6 +83,12 @@ monitor are paid features of the site and the HTTP API (below). They are not MCP
   EditalMD.
 
 ## Examples
+
+For a construction search by city, call `ref` with `tipo=municipio` and at least two
+characters in `q`. Use `descricao` as `municipio` and the `uf` from that result.
+Read `fonte.referencia` and `fonte.estado`. Follow `cursor` with the same filters.
+The lookup includes works with a company responsible for them. It does not issue
+an official construction certificate.
 
 ```bash
 # Company record (free)
@@ -102,3 +112,7 @@ curl -s -X POST https://radar-cnpj.com/api/avaliar \
 - The free CNPJ record has an edge cache of 6 hours.
 - Terms: https://radar-cnpj.com/termos. Privacy: https://radar-cnpj.com/privacidade.
   Contact: contato@radar-cnpj.com.
+
+## OpenAI package
+
+The OpenAI package uses the same public `https://radar-cnpj.com/mcp` endpoint and its published tools. Its packaging, installation and directory review are separate from this Claude plugin. A prepared package does not establish installation or directory approval.
