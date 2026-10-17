@@ -84,6 +84,21 @@ monitor are paid features of the site and the HTTP API (below). They are not MCP
 
 ## Examples
 
+For a SICAF supplier lookup, use `suggest`, then `get_cnpj` with `temas: "sicaf"`.
+The response selects `registros.itens` and `registros.fontes` for SICAF. Check their source and date.
+The site has company autocomplete at `/fornecedores-do-governo`.
+Its selection opens `/?tema=sicaf&cnpj=<cnpj>` with the SICAF section selected.
+
+Both `get_cnpj` and `consulta_cnpj` accept a comma-separated `temas` string.
+The HTTP routes accept the same query parameter, for example
+`/api/cnpj/53611681000190?temas=sicaf,contratos,bndes`.
+Options: dados, socios, sancoes, fiscal, divida, obras, trabalho, ibama, contratos, pep,
+vendas, campanhas, prefeituras, sicaf, aeronaves, fundos, rntrc, bndes, registros; or todos.
+Omit it for the full record. Basic company data always stays. Unrequested blocks are absent;
+`null` means an unchecked source, not a clean record. The limit is 240 characters.
+Empty, unknown or repeated parameters return HTTP 400. Pricing and masking do not change.
+In `consulta_cnpj`, the live CNIA check requires sancoes and the map lookup requires dados.
+
 For a construction search by city, call `ref` with `tipo=municipio` and at least two
 characters in `q`. Use `descricao` as `municipio` and the `uf` from that result.
 Read `fonte.referencia` and `fonte.estado`. Follow `cursor` with the same filters.
