@@ -53,12 +53,16 @@ Claude Desktop, open Settings → Connectors → Add custom connector and paste 
 
 ## Price
 
-The CNPJ record, the search, the idea evaluation and the export are free and need no key. The full check gives a
-free allowance each day; after it, the check uses a pack or a plan. The bulk check, the company dossier and the
-monitoring of more than 10 companies are paid. You buy plans and prepaid credit on the site, and plans do not renew
-automatically. The plugin never pays: with `checkout=site`, the MCP server has no purchase tool and no payment
+The public CNPJ record and search need no key. The full check and AI operations have their own free allowances.
+The company dossier and extra monitoring use paid access. Read `/api/pricing` for current allowances and prices.
+You buy plans and prepaid credit on the site. With `checkout=site`, the MCP server has no purchase tool or x402 payment
 argument. The agent shows the price and the link, and after your purchase it uses your credit token. The current
 prices are at https://radar-cnpj.com/pricing.
+
+For an agent authorized to pay, the direct `/mcp` also exposes existing per-call services without an account.
+Read `/api/pricing` and `/api/billing` first. An x402 quote is in `structuredContent`;
+retry with `params._meta["x402/payment"]` only within the user's budget.
+The site offers Pix or card only when that method is enabled.
 
 ## What the plugin sends
 
@@ -77,8 +81,10 @@ default. Use personal data only for a legitimate purpose, as the Brazilian data 
 O Radar CNPJ deixa o agente de IA consultar empresas brasileiras. Ele traz a ficha da Receita, os sócios, as
 sanções, a dívida ativa da União, os contratos com o governo e mais de 40 bases públicas, com a data de cada fonte.
 Este repositório traz a skill e a conexão com o servidor MCP remoto. Instale com os comandos acima. A consulta de
-CNPJ, a busca e a avaliação de ideia são grátis e não pedem chave. A compra é sempre no site, e o plugin nunca paga
-sozinho. Os preços estão em https://radar-cnpj.com/pricing.
+CNPJ pública e a busca não pedem chave. A consulta completa e a IA têm franquias próprias.
+Neste plugin, a pessoa compra no site; o agente usa o crédito que ela fornecer.
+O MCP direto também oferece chamadas pagas por x402, com autorização e orçamento.
+Os preços estão em https://radar-cnpj.com/pricing.
 
 ## Files
 
