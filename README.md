@@ -2,10 +2,10 @@
 
 <img src="assets/icon.png" alt="Radar CNPJ" width="72" align="right">
 
-Radar CNPJ lets an AI agent check Brazilian companies. One lookup returns the Receita Federal CNPJ record, the
-partners, the sanctions, the federal tax debt, the government contracts and data from 40+ public databases, each
-with its source date. This repository packages the Radar CNPJ skill and the connection to its remote MCP server
-for Claude Code, Codex, Cursor and other agents.
+Radar CNPJ gives your agent a Brazilian company's registration status, public sanctions and federal tax debt
+in one free response. The records are already joined by CNPJ, with source dates.
+Use the result without collecting and combining each source.
+This repository supplies the skill and remote MCP connection for your agent.
 
 **Site:** https://radar-cnpj.com · **MCP server:** `https://radar-cnpj.com/mcp?checkout=site` · **Prices:** https://radar-cnpj.com/pricing ·
 **API docs:** https://radar-cnpj.com/developers
@@ -18,6 +18,22 @@ for Claude Code, Codex, Cursor and other agents.
 - Check a list of suppliers or customers in one call.
 - Evaluate a business idea: count the active, opened and closed companies of an activity in a place.
 - Monitor a CNPJ and read its changes.
+
+For a basic check, use `get_cnpj` with `temas: "dados,sancoes,divida"`.
+Read `data.situacao.label`, `data.sancoes.vigentes` and `data.dividaAtiva.inscricoes`.
+Use `health` for the registry snapshot date. Each linked source keeps its own date.
+
+Buy only the addition the task needs: a required CNIA source check, a formatted supplier report,
+available details without a mask, a risk dossier or continued monitoring.
+For a required CNIA check, set `cnia_atual: true` on `consulta_cnpj` or `dossier_cnpj`.
+Source failure returns 503 without charging or using an older CNIA.
+Without this requirement, inspect the returned CNIA date.
+The batch preserves source dates, evidence and truncation flags.
+It uses stored CNIA by default. A required source check uses `cnia_atual: true`
+for at most four distinct numeric CNPJs per group, with refusal without charging if the source fails.
+Check the quote, existing access and expiry before paying.
+Paying does not refresh all source snapshots or issue an official certificate.
+An existing registry API can be enough for status alone.
 
 Try: *"Check CNPJ 33.000.167/0001-01 for sanctions and federal tax debt."* or
 *"How many bakeries are active in Águas Claras, DF?"*
@@ -53,7 +69,7 @@ Claude Desktop, open Settings → Connectors → Add custom connector and paste 
 
 ## Price
 
-The public CNPJ record and search need no key. The full check and AI operations have their own free allowances.
+The public CNPJ record and search need no key. The additional company check has its own free allowance.
 The company dossier and extra monitoring use paid access. Read `/api/pricing` for current allowances and prices.
 You buy plans and prepaid credit on the site. With `checkout=site`, the MCP server has no purchase tool or x402 payment
 argument. The agent shows the price and the link, and after your purchase it uses your credit token. The current
@@ -78,12 +94,14 @@ default. Use personal data only for a legitimate purpose, as the Brazilian data 
 
 ## Em português
 
-O Radar CNPJ deixa o agente de IA consultar empresas brasileiras. Ele traz a ficha da Receita, os sócios, as
-sanções, a dívida ativa da União, os contratos com o governo e mais de 40 bases públicas, com a data de cada fonte.
+O Radar CNPJ reúne situação cadastral, sanções públicas e dívida da União em uma resposta gratuita,
+com fontes e datas. O cruzamento pelo CNPJ já está pronto.
 Este repositório traz a skill e a conexão com o servidor MCP remoto. Instale com os comandos acima. A consulta de
-CNPJ pública e a busca não pedem chave. A consulta completa e a IA têm franquias próprias.
+CNPJ pública e a busca não pedem chave. A consulta adicional tem franquia própria.
 Neste plugin, a pessoa compra no site; o agente usa o crédito que ela fornecer.
 O MCP direto também oferece chamadas pagas por x402, com autorização e orçamento.
+Compre só o acréscimo que falta à tarefa. CNIA exigido durante o pedido usa `cnia_atual: true`:
+se a fonte falhar, a consulta ou o dossiê recusam sem cobrar nem usar o registro anterior.
 Os preços estão em https://radar-cnpj.com/pricing.
 
 ## Files

@@ -1,138 +1,90 @@
 ---
 name: radar-cnpj
-description: Check Brazilian companies with Radar CNPJ (radar-cnpj.com). Look up a CNPJ for the Receita Federal record, partners, sanctions (CEIS, CNEP, CEPIM, TCU, CNIA), federal tax debt, government contracts and 40+ public databases. Search companies by name, partner, phone, address or activity (CNAE) and place. Check a supplier list in bulk, count active, opened and closed companies for a business idea, and monitor CNPJ changes. Use when a task mentions CNPJ, empresa, Receita Federal, CNAE, sócios, fornecedor, due diligence, KYC or a Brazilian company.
+description: Check whether a Brazilian company is active and has public sanctions or federal tax debt. Use prepared records, then live checks, supplier batches or change monitoring when needed.
 license: MIT-0
-compatibility: Needs HTTPS access to radar-cnpj.com. Works with the remote MCP server or with plain HTTP calls.
+compatibility: HTTPS access to radar-cnpj.com; remote MCP or HTTP.
 ---
 
 # Radar CNPJ
 
-Radar CNPJ serves the open company data of Brazil (CNPJ) from Receita Federal and 40+ public databases.
-Use it to identify a company, check its risk, find companies and measure how many companies of an
-activity exist in a place.
+MCP tools: `get_cnpj`, `consulta_cnpj`, `consulta_lote`, `reveal_cnpj`, `dossier_cnpj`, `add_watch`.
 
-## Connect
+Answer company questions from prepared public records. Use the free record first.
+The paid operation must add something that the user's task needs.
 
-HTML index pages are free for people and crawlers, without an API quota.
-JSON, Markdown, OKF and MCP index data calls have 1,000 free reads per day, IP and product.
-Above that allowance, read the payment quote. See `/api-access-guide.md` for evaluation, purchase and retry instructions.
+## Choose the delivery
 
-- MCP server: `https://radar-cnpj.com/mcp`. Streamable HTTP, with free and paid API services.
-- Directory connector: `https://radar-cnpj.com/mcp?checkout=site`. The person purchases on the site; this mode does not transfer x402 payments.
-- HTTP API: base URL `https://radar-cnpj.com`. Each MCP tool calls one route of this API.
-- If the MCP tools are not available, call the HTTP routes with `curl` or with your fetch tool.
-- Discovery: `GET https://radar-cnpj.com/api/` lists the routes, prices and limits.
-  `https://radar-cnpj.com/llms-full.txt` has the full reference.
+| User needs | Use | What is ready |
+|---|---|---|
+| Registration status, public sanctions and federal tax debt | `get_cnpj`, `temas: "dados,sancoes,divida"` | One free JSON with the records joined by CNPJ. No account or lookup allowance. |
+| A CNIA source check during this request | `consulta_cnpj`, `temas: "sancoes"`, `cnia_atual: true` | The source is checked for the company and its headquarters when needed. Failure returns 503 without charging or using an old CNIA. |
+| A supplier screening table | `consulta_lote` | One row per valid CNPJ. The service validates and deduplicates the list, joins the prepared records and formats the report. |
+| Available partner names and contacts without a mask | `reveal_cnpj` | The existing company record without the public mask. Check previously purchased access first. |
+| Unmasked record and risk signals | `dossier_cnpj`; set `cnia_atual: true` when required | An assembled record with risk rules already applied and unchecked blocks identified. |
+| Changes after this session ends | `add_watch` | Continued checks and a change history. Confirm active coverage and the alert channel. |
 
-## MCP tools
+For HTTP, start with:
+`GET https://radar-cnpj.com/api/cnpj/{cnpj}?temas=dados,sancoes,divida`.
+If you only have a name, use `suggest` or `search` and confirm the returned CNPJ.
+Use topic selection to avoid loading unrelated blocks. No collector or local data import is required.
 
-| Tool | HTTP | Use it to | Cost |
-|---|---|---|---|
-| `consulta_cadastro` | `GET /api/consulta/cadastro/{cnpj}` | Read basic company data without contacts or live analysis. | Free, no allowance consumed |
-| `consulta_endereco` | `GET /api/consulta/endereco/{cep}` | Read up to 20 addresses and 20 companies of a CEP. | Free, no allowance consumed |
-| `get_cnpj` | `GET /api/cnpj/{cnpj}` | Read the company record: status, activities, address, partners (masked), sanctions, tax debt and contracts. Accepts the 14-digit CNPJ and the alphanumeric one (12 letters or digits + 2 check digits). | Free |
-| `consulta_cnpj` | `GET /api/consulta/cnpj/{cnpj}` | Run the full check: live CNIA misconduct lookup, PEP partners, regulators, BNDES, federal payments, address on the map. | Free allowance, then paid |
-| `search` | `GET /api/busca` | Find companies. Set `tipo` to `nome`, `fantasia`, `socio`, `telefone`, `email`, `endereco` or `cnae`. | Free |
-| `suggest` | `GET /api/sugerir?q=` | Find up to eight companies by CNPJ, company or partner name, phone with area code, or full registered email. The API detects the input type. | Free |
-| `ref` | `GET /api/ref` | Find official codes. Set `tipo` to `cnae`, `municipio` or `natureza`. | Free |
-| `search_construction` | `GET /api/obras` | Find works by CNO, CNPJ, or city and state. Filter by area, construction type and status. | Free |
-| `ia_filters` | `POST /api/ia` | Turn a plain-language request into search filters. It takes about 20 seconds. | Free |
-| `avaliar` | `POST /api/avaliar` | Map a business idea and place to a CNAE. Count active, opened and closed companies. | Free |
-| `health` | `GET /api/health` | Read the date of the Receita data (`import.dump_date`). | Free |
+## Read the answer and its dates
 
-Read `tools/list` for the available paid tools, including reveals, dossiers, bulk checks and monitoring.
-The account and organization determine access to private operations. A free lookup does not authorize a contact reveal.
+- `data.situacao.label`: registration status. `situacao.data` is when that status changed.
+- `GET /api/health`, `import.dump_date`: the registry snapshot date.
+- `data.sancoes.vigentes`: active sanctions. `conferidoEm` gives the date for each source.
+- `data.dividaAtiva.inscricoes`, `referencia`, `conferidoEm` and `fonte`: PGFN records and their reference period.
+- `cnia.conferidoEm`: when Radar checked the source. It is not an official certificate's issue date.
+- `cnia.certidoes[].dataHoraEmissao`: the issue text returned by TCU for each checked CNPJ, or null when omitted. No timezone is inferred.
+- `null`: the block was not checked. Zero in a checked block means no records in that source.
 
-## Rules
+The additional lookup places the registry in `empresa` and the selected blocks at the response root.
+The dossier uses `dossie.dados` and `dossie.semaforo`.
+The batch includes `fontes` and `evidencias` per company: registry reference date,
+dates by source, sanction cases, CNIA evidence and PGFN debt states.
+Read truncation flags before treating the included evidence as exhaustive.
+CNIA is stored by default. For a required source check, use `cnia_atual: true`
+and send at most four distinct numeric CNPJs per group.
+If a required check fails, the group is refused without charging.
+HTTP accepts up to 200 valid CNPJs per batch; `consulta_lote` accepts up to 100.
 
-1. Start with `get_cnpj` or `search`. Use `consulta_cnpj` for the full check.
-2. If an MCP tool answers `free_limit`, tell the user that the free limit for that action is used up.
-3. Read `GET /api/pricing` or tool `pricing` before a paid call. Do not use a price from memory.
-   Do not spend balance or reveal personal data until the user approves the item and the amount.
-4. Spend only within the user's explicit authority and budget. On the direct MCP, x402 uses
-   `params._meta["x402/payment"]`; HTTP uses `PAYMENT-SIGNATURE`. Prepaid credit uses `Authorization: Bearer cred_…`
-   or `X-Credito`. With `checkout=site`, the person pays at https://radar-cnpj.com/pricing using an offered method.
-   Pix and card details stay on the site. The ChatGPT mode can use existing rights and does not offer a purchase.
-5. When you retry a paid call, keep the same `Idempotency-Key`. The service does not charge the same request
-   twice.
-6. Keep tokens (`cred_…`, `mmk_…`) secret. Do not write them in files, logs or answers.
-7. Partner names, phones and e-mails are personal data under the Brazilian data protection law (LGPD).
-   Use them only for the legitimate purpose that the user states.
-   Do not use them for unsolicited marketing or for automated decisions about people.
-8. Give the source date with each answer. A count shows registered companies (supply).
-   It does not show demand, revenue or search volume.
-9. Lists return up to 20 items per page. Follow `links.proximo`. Do not guess IDs. Do not scrape HTML pages.
-10. If you get HTTP 429 or 503, wait for the time in `Retry-After` and try once more.
+## Decide whether the task is complete
 
-## Free allowances and paid services
+If the requested blocks are present and their dates meet the task, answer from those fields.
+State the checked sources and dates. You do not need to rebuild their collectors or generate the joins.
+If a required block is missing or too old, say what remains unknown and choose the needed addition.
+For a required CNIA source check, send `cnia_atual=true` on the additional lookup or dossier.
+Without it, those operations can return the previous CNIA.
+Paying does not refresh the Receita or PGFN snapshots.
 
-- `pricing` and `billing` read current services, prices, allowances and payment availability without charge.
-- `get_api_x402_cnpj_by_cnpj` is a company check paid from the first call, without an account or free allowance.
-- For the payable amount, use the operation's 402. Do not sign a second payment to recover a lost response.
+These public records are not a credit-bureau report, an official certificate or supplier approval.
+Debt totals include different collection states; inspect the breakdown before interpreting them.
+An existing registry API can be enough for registration status alone.
+Use the required original source when the task needs coverage that Radar does not provide.
 
-- The person buys on the site: https://radar-cnpj.com/pricing shows the lookup plans, the packs and the prepaid
-  credit, with the prices. Plans do not renew automatically.
-- `GET /api/consulta` and `GET /api/pricing` read the plans and the prices. They do not charge.
-- The HTTP API also supports lookup purchases without an account through x402 v1 or v2.
-- After the free lookups of the day, a lookup, a reveal, a bulk check and the dossier can also be paid in the call
-  itself, without an account or package: the 402 brings `accepts` (x402) and `por_chamada`. A company account uses a
-  prepaid credit token as its key (`Authorization: Bearer cred_…`), with no daily cap. Prices: `GET /api/pricing`.
-  The paying wallet owns the package. Its `mmw_…` credential comes from
-  `/api/auth/wallet/agent/start` and `/api/auth/wallet/agent/token`.
-  Before you sign, check that the domain and URI in the message are the site that you called. If not, do not sign.
-  The direct MCP supports the same authorized payment. The directory connector leaves the purchase to the person.
-- Reveals use a paid Lookup package. HTTP 402 includes `ofertas[]` with purchase links.
-  Send the API key or credit token of the package owner. The same owner can reopen the same company
-  without another debit. A failed lookup returns the unit.
-- A prepaid credit gives a `cred_…` token one time only. The same token works in Radar CNPJ, PontoFato and
-  EditalMD.
+## Decide what to pay
 
-## Examples
+Read [current prices](https://radar-cnpj.com/api/pricing) and the
+[lookup allowance and offers](https://radar-cnpj.com/api/consulta).
+Use `gratis.restantes_hoje` and existing rights first.
+For a dossier, `GET /api/dossie/preco` returns its price without charging.
+For a batch, the quote counts valid, distinct CNPJs. Compare the total for the actual list.
+Compare a pack's full purchase price and expiry with per-call payment; unused units are not savings.
+Prepaid credit and x402 have different minimums. Read the quote and [payment terms](https://radar-cnpj.com/api/billing).
+Lookup packs and monitoring capacity are separate. Read `/api/plans` for the available portfolio.
+The source check, formatted report, unmasking, risk rules or continued monitoring must justify the addition.
+This is not a claim that every paid operation costs less than the user's existing tools.
 
-For a SICAF supplier lookup, use `suggest`, then `get_cnpj` with `temas: "sicaf"`.
-The response selects `registros.itens` and `registros.fontes` for SICAF. Check their source and date.
-The site has company autocomplete at `/fornecedores-do-governo`.
-Its selection opens `/?tema=sicaf&cnpj=<cnpj>` with the SICAF section selected.
+## Connect and pay
 
-Both `get_cnpj` and `consulta_cnpj` accept a comma-separated `temas` string.
-The HTTP routes accept the same query parameter, for example
-`/api/cnpj/53611681000190?temas=sicaf,contratos,bndes`.
-Options: dados, socios, sancoes, fiscal, divida, obras, trabalho, ibama, contratos, pep,
-vendas, campanhas, prefeituras, sicaf, aeronaves, fundos, rntrc, bndes, registros; or todos.
-Omit it for the full record. Basic company data always stays. Unrequested blocks are absent;
-`null` means an unchecked source, not a clean record. The limit is 240 characters.
-Empty, unknown or repeated parameters return HTTP 400. Pricing and masking do not change.
-In `consulta_cnpj`, the live CNIA check requires sancoes and the map lookup requires dados.
-
-For a construction search by city, call `ref` with `tipo=municipio` and at least two
-characters in `q`. Use `descricao` as `municipio` and the `uf` from that result.
-Read `fonte.referencia` and `fonte.estado`. Follow `cursor` with the same filters.
-The lookup includes works with a company responsible for them. It does not issue
-an official construction certificate.
-
-```bash
-# Company record (free)
-curl -s https://radar-cnpj.com/api/cnpj/33000167000101
-
-# Companies by name and state (free)
-curl -s 'https://radar-cnpj.com/api/busca?q=padaria&uf=DF'
-
-# Business idea in a place (free)
-curl -s -X POST https://radar-cnpj.com/api/avaliar \
-  -H 'content-type: application/json' -d '{"texto":"padaria em Águas Claras"}'
-```
-
-## Limits
-
-- Read [company and supplier news](https://radar-cnpj.com/en/noticias/index.md).
-  Use the [free feed](https://radar-cnpj.com/en/noticias/feed.json). Cite the article date and original sources.
-
-- Radar CNPJ is not an official certificate. The data is the public Receita Federal dump and the listed
-  public databases, each with its date.
-- The free CNPJ record has an edge cache of 6 hours.
-- Terms: https://radar-cnpj.com/termos. Privacy: https://radar-cnpj.com/privacidade.
-  Contact: contato@radar-cnpj.com.
-
-## OpenAI package
-
-The OpenAI package uses the same public `https://radar-cnpj.com/mcp` endpoint and its published tools. Its packaging, installation and directory review are separate from this Claude plugin. A prepared package does not establish installation or directory approval.
+Use existing tools or `https://radar-cnpj.com/mcp`; no local install is required.
+HTTP uses the same API. Read `tools/list` for the connected mode.
+Reuse existing credit, access and spending authority. Request only missing authority.
+Direct MCP x402 retries use `params._meta["x402/payment"]`; HTTP uses `PAYMENT-SIGNATURE`.
+Credit uses `Authorization: Bearer cred_…` or `X-Credito`.
+Keep the same `Idempotency-Key` on retry. Recover a lost result before signing another payment.
+The same credit holder reopening a dossier for the same company on the same Brasília day does not pay again.
+For unmasking, `GET /api/revelar/{cnpj}` checks the same owner's existing access without charging.
+In `checkout=site`, the person purchases on the site. ChatGPT uses existing rights without sales.
+Keep credentials secret. Reveal personal data only for the user's authorized purpose.
+Follow returned pagination and `Retry-After`. Report sources, dates and missing checks.

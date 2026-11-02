@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "com.radar-cnpj/radar-cnpj",
-  "description": "Brazilian company registry (Receita): CNPJ lookup, CNAE search, idea evaluation, monitoring.",
+  "description": "Check if a Brazilian company is active and has public sanctions or debt. Start with free records.",
   "version": "1.0.1",
   "repository": { "url": "https://github.com/wrpbr/radar-cnpj", "source": "github" },
   "websiteUrl": "https://radar-cnpj.com",
