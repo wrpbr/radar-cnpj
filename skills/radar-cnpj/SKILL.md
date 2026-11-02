@@ -18,7 +18,7 @@ The paid operation must add something that the user's task needs.
 |---|---|---|
 | Registration status, public sanctions and federal tax debt | `get_cnpj`, `temas: "dados,sancoes,divida"` | One free JSON with the records joined by CNPJ. No account or lookup allowance. |
 | A CNIA source check during this request | `consulta_cnpj`, `temas: "sancoes"`, `cnia_atual: true` | The source is checked for the company and its headquarters when needed. Failure returns 503 without charging or using an old CNIA. |
-| A supplier screening table | `consulta_lote` | One row per valid CNPJ. The service validates and deduplicates the list, joins the prepared records and formats the report. |
+| A supplier screening table | `consulta_lote` for JSON; HTTP for a CSV file | One row per valid CNPJ, with sources and evidence. The service validates, deduplicates and formats the list. |
 | Available partner names and contacts without a mask | `reveal_cnpj` | The existing company record without the public mask. Check previously purchased access first. |
 | Unmasked record and risk signals | `dossier_cnpj`; set `cnia_atual: true` when required | An assembled record with risk rules already applied and unchecked blocks identified. |
 | Changes after this session ends | `add_watch` | Continued checks and a change history. Confirm active coverage and the alert channel. |
@@ -47,6 +47,27 @@ CNIA is stored by default. For a required source check, use `cnia_atual: true`
 and send at most four distinct numeric CNPJs per group.
 If a required check fails, the group is refused without charging.
 HTTP accepts up to 200 valid CNPJs per batch; `consulta_lote` accepts up to 100.
+
+## Deliver a spreadsheet without writing an exporter
+
+For a CSV file, use HTTP and save the response directly. MCP returns JSON.
+After reading the quote and confirming existing spending authority:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  'https://radar-cnpj.com/api/consulta/lote?formato=csv&lingua=pt' \
+  -H "X-Credito: $CREDITO" -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $IDEMPOTENCY_KEY" \
+  --data '{"cnpjs":["00000000000191","33000167000101"]}' \
+  --output fornecedores.csv
+```
+
+Use the authorized credit and a saved request key. Keep the key on retry.
+Check success before sharing the file: an error body is not a spreadsheet.
+The file has UTF-8 accents, one row per valid CNPJ and source/evidence columns.
+Read the required cells and dates; do not send the whole CSV through the model just to copy it.
+The free records already contain the screening data. Buy the formatted file when it removes
+export work that your task still needs. An existing free integration and exporter may be sufficient.
 
 ## Decide whether the task is complete
 
@@ -84,6 +105,7 @@ Direct MCP x402 retries use `params._meta["x402/payment"]`; HTTP uses `PAYMENT-S
 Credit uses `Authorization: Bearer cred_…` or `X-Credito`.
 Keep the same `Idempotency-Key` on retry. Recover a lost result before signing another payment.
 The same credit holder reopening a dossier for the same company on the same Brasília day does not pay again.
+To get that dossier back without a charge, even with no balance left, read `GET /api/dossie/{cnpj}` with the same credit.
 For unmasking, `GET /api/revelar/{cnpj}` checks the same owner's existing access without charging.
 In `checkout=site`, the person purchases on the site. ChatGPT uses existing rights without sales.
 Keep credentials secret. Reveal personal data only for the user's authorized purpose.
