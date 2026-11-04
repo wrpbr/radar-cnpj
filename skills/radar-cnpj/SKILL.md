@@ -7,10 +7,24 @@ compatibility: HTTPS access to radar-cnpj.com; remote MCP or HTTP.
 
 # Radar CNPJ
 
-MCP tools: `get_cnpj`, `consulta_cnpj`, `consulta_lote`, `reveal_cnpj`, `dossier_cnpj`, `add_watch`.
+MCP tools: `suggest`, `search`, `get_cnpj`, `consulta_cnpj`, `consulta_lote`, `reveal_cnpj`, `dossier_cnpj`, `list_watches`, `add_watch`.
 
 Answer company questions from prepared public records. Use the free record first.
 The paid operation must add something that the user's task needs.
+
+## Everyday requests
+
+Use this skill for ordinary company questions, even when the user does not name Radar CNPJ.
+Reuse the company, location and authorized access from the conversation.
+Resolve names before reading a CNPJ. Ask only for missing facts that change the result.
+Complete the useful checks the task needs. Report evidence, dates and unknowns.
+Do not add unrelated purchases or treat this skill as spending authority.
+
+- "Does WRP Consultoria e Informatica have any public restrictions?" Resolve the name with `suggest`, then read `get_cnpj`.
+- "Does WRP Consultoria e Informatica in Distrito Federal have federal tax debt?" Resolve with `search`, confirm the establishment and read the debt block.
+- "Show Banco do Brasil's dossier and explain the reported risk signals." Confirm the CNPJ, check existing access and the quote, then use `dossier_cnpj`.
+- "Check this supplier CNPJ list and build a table of registration status, sanctions and tax debt." Use `consulta_lote` with the required evidence and authorized budget.
+- "Monitor WRP Consultoria e Informatica and notify me when its registration changes." Reuse `list_watches` before `add_watch`; verify coverage and the alert channel.
 
 ## Choose the delivery
 

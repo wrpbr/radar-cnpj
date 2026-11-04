@@ -1,7 +1,7 @@
 {
   "name": "radar-cnpj",
   "displayName": "Radar CNPJ",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Get Brazilian company status, public sanctions and federal tax debt together, free, with source dates. Add a required CNIA source check, supplier report, unmasked details or monitoring when the task needs it. Use the remote MCP without a local collector.",
   "author": {
     "name": "Radar CNPJ",
